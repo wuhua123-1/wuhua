@@ -947,7 +947,7 @@
     </div>
     <div class="fx-layer" id="fxLayer"></div>
     <div id="modalContainer"></div>
-    <script>
+<script>
 const firebaseConfig = {
   apiKey: "AIzaSyCk8WOSS3rOWjJwNvU0v__nuWyzo6BP9n58",
   authDomain: "wuhua666-335c1.firebaseapp.com",
@@ -959,6 +959,8 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+</script>
+<script>
         (function() {            
             const DEFAULT_AVATAR = 'https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAET8eRp_B6XwWRJlAfp00EYyC7kG8X0OQACaiYAAsfO4Vegas-RHCjA_jsE.jpg';
             const DEFAULT_GUILDS = [
@@ -1467,26 +1469,27 @@ const db = firebase.database();
                 if (tab.dataset.page === 'rankPage') renderRankPage();
             });
 
-            function init() {
-                appData.guilds.forEach(g => {
-                    if (!g.avatar) g.avatar = DEFAULT_AVATAR;
-                    if (!g.history) g.history = '暂无历史记录。';
-                    g.svipLevel = calcSvipLevel(g.popularity || 0);
-                });
-                const today = new Date().toDateString();
-                if (appData.todayDate !== today) {
-                    appData.todayDate = today;
-                    appData.todayVotesUsed = 0;
-                    appData.signedToday = false;
-                }
-                refreshAllUI();
-                if (appData.guilds.length > 0) selectGuild(appData.guilds[0].id);
-                window.selectGuild = selectGuild;
-                window.clampVoteAmount = clampVoteAmount;
-            }
-            init();
-            console.log('🚀 封号圈完整版已启动 | 管理密码：雾化牛逼');
+function init() {
+    appData.guilds.forEach(g => {
+        if (!g.avatar) g.avatar = DEFAULT_AVATAR;
+        if (!g.history) g.history = '暂无历史记录。';
+        g.svipLevel = calcSvipLevel(g.popularity || 0);
+    });
+    const today = new Date().toDateString();
+    if (appData.todayDate !== today) {
+        appData.todayDate = today;
+        appData.todayVotesUsed = 0;
+        appData.signedToday = false;
+    }
+    refreshAllUI();
+    if (appData.guilds.length > 0) selectGuild(appData.guilds[0].id);
+    window.selectGuild = selectGuild;
+    window.clampVoteAmount = clampVoteAmount;
+    loadData();
+}
+init();
+console.log('🚀 封号圈完整版已启动 | 管理密码：雾化牛逼');
         })();
     </script>
-</body>
+    </body>
 </html>
