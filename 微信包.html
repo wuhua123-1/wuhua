@@ -1,3 +1,6 @@
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -906,8 +909,8 @@
     <div class="app-container" id="appContainer">
         <div class="top-bar">
             <div class="logo-area"><span class="logo-dot"></span>封号圈</div>
-            <div class="point-balance"><span>💎</span> <span class="point-num" id="pointNum">0</span> 点卷</div>
-            <button class="btn-sign blink-call" id="btnSign" onclick="doSign()">🎁 签到领点卷</button>
+            <div class="point-balance"><span>💎</span> <span class="point-num" id="pointNum">0</span> 钻石</div>
+            <button class="btn-sign blink-call" id="btnSign" onclick="doSign()">🎁 签到领钻石</button>
         </div>
         <div class="nav-tabs" id="navTabs">
             <button class="nav-tab active" data-page="votePage">🗳️ 投票</button>
@@ -945,8 +948,18 @@
     <div class="fx-layer" id="fxLayer"></div>
     <div id="modalContainer"></div>
     <script>
-        (function() {
-            const STORAGE_KEY = 'fhq_v9_final';
+const firebaseConfig = {
+  apiKey: "AIzaSyCk8WOSS3rOWjJwNvU0v__nuWyzo6BP9n58",
+  authDomain: "wuhua666-335c1.firebaseapp.com",
+  databaseURL: "https://wuhua666-335c1-default-rtdb.firebaseio.com",
+  projectId: "wuhua666-335c1",
+  storageBucket: "wuhua666-335c1.firebasestorage.app",
+  messagingSenderId: "533471509844",
+  appId: "1:533471509844:web:86c39cf365177b9f169cc1"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+        (function() {            
             const DEFAULT_AVATAR = 'https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAET8eRp_B6XwWRJlAfp00EYyC7kG8X0OQACaiYAAsfO4Vegas-RHCjA_jsE.jpg';
             const DEFAULT_GUILDS = [
                 { id: 'g1', name: '天堂', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '天堂公会成立于2024年，以秩序和守护为核心理念。' },
@@ -971,26 +984,38 @@
             }
 
             function loadData() {
-                try {
-                    const raw = localStorage.getItem(STORAGE_KEY);
-                    if (raw) {
-                        const data = JSON.parse(raw);
-                        if (data.todayDate !== new Date().toDateString()) {
-                            data.todayVotesUsed = 0;
-                            data.todayDate = new Date().toDateString();
-                            data.signedToday = false;
-                        }
-                        data.guilds.forEach(g => {
-                            g.svipLevel = calcSvipLevel(g.popularity || 0);
-                            if (!g.history) g.history = '暂无历史。';
-                        });
-                        return data;
-                    }
-                } catch (e) {}
-                return getDefaultData();
+    db.ref('voteData').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            appData = data;
+            const today = new Date().toDateString();
+            if (appData.todayDate !== today) {
+                appData.todayVotesUsed = 0;
+                appData.todayDate = today;
+                appData.signedToday = false;
             }
+            if (!appData.guilds || appData.guilds.length === 0) {
+                appData.guilds = JSON.parse(JSON.stringify(DEFAULT_GUILDS));
+            }
+            appData.guilds.forEach(g => {
+                g.svipLevel = calcSvipLevel(g.popularity || 0);
+                if (!g.history) g.history = '暂无历史。';
+            });
+            refreshAllUI();
+        } else {
+            const defaultData = getDefaultData();
+            db.ref('voteData').set(defaultData);
+            appData = defaultData;
+            refreshAllUI();
+        }
+    });
+}
 
-            function saveData(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
+            function saveData(data) {
+    const dataToSave = JSON.parse(JSON.stringify(data));
+    dataToSave.guilds.forEach(g => delete g.svipLevel);
+    db.ref('voteData').set(dataToSave);
+}
 
             function calcSvipLevel(p) {
                 if (p >= 20000) return 6;
@@ -1026,7 +1051,7 @@
                     pointNumEl.classList.add('flash');
                     setTimeout(() => pointNumEl.classList.remove('flash'), 500);
                 }
-                btnSignEl.textContent = appData.signedToday ? '✅ 已签到' : '🎁 签到领点卷';
+                btnSignEl.textContent = appData.signedToday ? '✅ 已签到' : '🎁 签到领钻石';
                 btnSignEl.classList.toggle('signed', appData.signedToday);
                 btnSignEl.classList.toggle('blink-call', !appData.signedToday);
             }
@@ -1265,7 +1290,7 @@
                 saveData(appData);
                 updatePointDisplay(true);
                 spawnFX('💰', 10, 0.85, 0.15);
-                showToast('签到成功！+500点卷');
+                showToast('签到成功！+500钻石');
             };
 
             window.submitVote = function() {
@@ -1295,7 +1320,7 @@
                 updatePointDisplay(true);
                 updateRemainVotes();
                 spawnFX('🗳️', 12, 0.5, 0.4);
-                showToast(`投票成功！+${amount*1000}点卷`);
+                showToast(`投票成功！+${amount*1000}钻石`);
                 setTimeout(refreshAllUI, 600);
             }
 
@@ -1336,7 +1361,7 @@
                 qty = qty || 1;
                 const total = gift.cost * qty;
                 if (appData.userPoints < total) {
-                    showToast(`点卷不足，需要💎${total}`);
+                    showToast(`钻石不足，需要💎${total}`);
                     return;
                 }
                 appData.userPoints -= total;
@@ -1373,7 +1398,7 @@
                 <input class="input-field" id="newAvatar" placeholder="头像链接">
                 <input class="input-field" id="newHistory" placeholder="简介">
                 <button class="btn btn-primary" onclick="adminCreateGuild()">创建</button>
-                <hr>💎加点卷
+                <hr>💎加钻石
                 <input class="input-field" id="addPoints" value="1000" type="number">
                 <button class="btn btn-gold" onclick="adminAddPoints()">添加</button>
                 <hr><button class="btn btn-outline" onclick="exportData()">导出数据</button>`;
@@ -1424,7 +1449,7 @@
                 const amt = parseInt($('#addPoints')?.value) || 0;
                 if (amt <= 0) return;
                 appData.userPoints += amt; saveData(appData); updatePointDisplay(true);
-                showToast(`已添加${amt}点卷`); renderAdminPanel();
+                showToast(`已添加${amt}钻石`); renderAdminPanel();
             };
 
             window.exportData = function() {
@@ -1454,7 +1479,6 @@
                     appData.todayVotesUsed = 0;
                     appData.signedToday = false;
                 }
-                saveData(appData);
                 refreshAllUI();
                 if (appData.guilds.length > 0) selectGuild(appData.guilds[0].id);
                 window.selectGuild = selectGuild;
