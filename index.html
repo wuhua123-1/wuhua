@@ -1044,10 +1044,8 @@ window.registerUser = function() {
                 todayDate: new Date().toDateString()
             });
             document.getElementById('registerOverlay').style.display = 'none';
-            // 不要在这里调用 showToast，因为 appData 还没准备好
-           alert('注册成功！初始钻石 500');
-loadData();
-            
+            alert('注册成功！初始钻石 500');
+            loadData();
         }
     });
 };
