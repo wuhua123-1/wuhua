@@ -1029,26 +1029,52 @@ window.registerUser = function() {
         return;
     }
 
-    db.ref('registered_ids/' + inputId).once('value', function(snapshot) {
-        if (snapshot.exists()) {
-            errDiv.textContent = '该ID已被注册，请更换其他数字';
-            errDiv.style.display = 'block';
-        } else {
-            userId = inputId;
-            localStorage.setItem('fhq_user_id', userId);
-            db.ref('registered_ids/' + userId).set(true);
-            db.ref('users/' + userId).set({
-                userPoints: 500,
-                signedToday: false,
-                todayVotesUsed: 0,
-                todayDate: new Date().toDateString()
+    fetch('https://api.ipify.org?format=json')
+    .then(function(res){ return res.json(); })
+    .then(function(ipData){
+        var ipKey = 'ip_' + btoa(ipData.ip);
+        return db.ref('ip_blacklist/' + ipKey).once('value').then(function(ipSnap){
+            var today = new Date().toDateString();
+            if (ipSnap.exists() && ipSnap.val() === today) {
+                errDiv.textContent = '该设备今天已注册过，请明天再试';
+                errDiv.style.display = 'block';
+                return Promise.reject('IP_EXISTS');
+            }
+            return ipKey;
+        });
+    })
+    .then(function(ipKey){
+        return db.ref('registered_ids/' + inputId).once('value').then(function(snapshot){
+            if (snapshot.exists()) {
+                errDiv.textContent = '该ID已被注册，请更换其他数字';
+                errDiv.style.display = 'block';
+                return Promise.reject('ID_EXISTS');
+            }
+            var today = new Date().toDateString();
+            return db.ref('ip_blacklist/' + ipKey).set(today).then(function(){
+                userId = inputId;
+                localStorage.setItem('fhq_user_id', userId);
+                return Promise.all([
+                    db.ref('registered_ids/' + userId).set(true),
+                    db.ref('users/' + userId).set({
+                        userPoints: 500,
+                        signedToday: false,
+                        todayVotesUsed: 0,
+                        todayDate: today
+                    })
+                ]);
             });
-            document.getElementById('registerOverlay').style.display = 'none';
-            // 不要在这里调用 showToast，因为 appData 还没准备好
-           alert('注册成功！初始钻石 500');
-loadData();
-            
-        }
+        });
+    })
+    .then(function(){
+        document.getElementById('registerOverlay').style.display = 'none';
+        alert('注册成功！初始钻石 500');
+        loadData();
+    })
+    .catch(function(err){
+        if (err === 'IP_EXISTS' || err === 'ID_EXISTS') return;
+        errDiv.textContent = '注册失败，请稍后再试';
+        errDiv.style.display = 'block';
     });
 };
     
