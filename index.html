@@ -1684,10 +1684,10 @@ menuHTML += '<button onclick="adminShowTab(\'announce\')" id="adminTabAnnounce" 
 menuHTML += '</div>';
     
     const panel = $('#adminPanel');
-    if (!panel) return;
-    panel.style.display = 'block';
-    panel.innerHTML = menuHTML + '<div id="adminTabContent"></div>';
+   if (adminLevel === 'super_admin') {
     adminShowTab('guild');
+} else {
+    adminShowTab('announce');
 }
 window.adminShowTab = function(tab) {
     var tabs = ['Guild','Diamond','Chat','Announce','Grant'];
@@ -1779,20 +1779,28 @@ window.adminSendAnnounce = function() {
     }
 };
 
-window.adminGrant = function(){
-    var targetId = document.getElementById('grantUserId').value.trim();
-    var level = document.getElementById('grantLevel').value;
-    if(!targetId) { showToast('请输入用户ID'); return; }
-    db.ref('admins/' + targetId).set({level: level, name: '管理员'});
-    showToast('权限已授予');
-    renderAdminList();
-};
 window.adminRevoke = function(){
     var targetId = document.getElementById('grantUserId').value.trim();
     if(!targetId) { showToast('请输入要撤销的用户ID'); return; }
-    if(targetId === '188888') { showToast('无法撤销创始高级管理员'); return; }
+    if(targetId === '你的ID') { showToast('无法撤销创始高级管理员'); return; }
     db.ref('admins/' + targetId).remove();
-    showToast('权限已撤销');
+    // 如果被撤销的是当前登录用户，强制退出
+    if(targetId === userId) {
+        adminLoggedIn = false;
+        adminLevel = 'admin';
+        localStorage.removeItem('fhq_admin_logged_in');
+        updateRemainVotes();
+        $('#adminPanel').style.display = 'none';
+        var pwdInput = document.getElementById('adminPwd');
+        var loginBtn = document.querySelector('#adminPage .btn-outline');
+        if(pwdInput) pwdInput.style.display = 'block';
+        if(loginBtn) loginBtn.style.display = 'block';
+        var adminInfoEl = document.getElementById('adminInfo');
+        if(adminInfoEl) adminInfoEl.style.display = 'none';
+        showToast('你的管理员权限已被撤销');
+    } else {
+        showToast('权限已撤销');
+    }
     renderAdminList();
 };
 function renderAdminList(){
