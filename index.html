@@ -2,12 +2,15 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; media-src * blob:; img-src * data: blob:; connect-src * https://*.firebaseio.com https://*.firebase.com wss://*.firebaseio.com;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes, viewport-fit=cover">
     <title>封号圈公会投票平台</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <style>
-        /* ========== 全局变量 ========== */
+        <style>
+    /* ========== 全局变量 ========== */
         :root {
             --bg-deep: #0D0D11;
             --bg-card: rgba(22, 22, 30, 0.75);
