@@ -960,7 +960,7 @@
             <button class="nav-tab active" data-page="votePage">🗳️投票</button>
             <button class="nav-tab" data-page="rankPage">🏆豪气榜</button>
             <button class="nav-tab" data-page="combinedPage">综合榜</button>
-<button class="nav-tab" data-page="adminPage">⚙️管理</button>
+<button class="nav-tab" data-page="adminPage">管理</button>
         </div>
         <div class="page active" id="votePage">
             <div class="card">
@@ -1558,28 +1558,30 @@ function executeGift(gift, guild, qty) {
             
 
 window.adminLogin = function() {
-    var pwd = $('#adminPwd').value.trim();
-    if (pwd === ADMIN_PASSWORD) {
-        adminLoggedIn = true;
-        adminLevel = 'super_admin';
-        localStorage.setItem('fhq_admin_logged_in', 'true');
-        updateRemainVotes();
-        renderAdminPanel();
-        showToast('高级管理员已解锁');
-    } else {
-        db.ref('admins/' + userId).once('value', function(snap){
-            if(snap.exists()){
-                adminLoggedIn = true;
-                adminLevel = snap.val().level || 'admin';
-                localStorage.setItem('fhq_admin_logged_in', 'true');
-                updateRemainVotes();
-                renderAdminPanel();
-                showToast('管理员已解锁');
-            } else {
-                showToast('密码错误或无权限');
-            }
-        });
-    }
+    // 先检查是否已被授权
+    db.ref('admins/' + userId).once('value', function(snap){
+        if(snap.exists()){
+            adminLoggedIn = true;
+            adminLevel = snap.val().level || 'admin';
+            localStorage.setItem('fhq_admin_logged_in', 'true');
+            updateRemainVotes();
+            renderAdminPanel();
+            showToast('管理员已解锁');
+            return;
+        }
+        // 没授权才检查密码
+        var pwd = $('#adminPwd').value.trim();
+        if (pwd === ADMIN_PASSWORD) {
+            adminLoggedIn = true;
+            adminLevel = 'super_admin';
+            localStorage.setItem('fhq_admin_logged_in', 'true');
+            updateRemainVotes();
+            renderAdminPanel();
+            showToast('高级管理员已解锁');
+        } else {
+            showToast('密码错误或无权限');
+        }
+    });
 };
 
 function renderAdminPanel() {
@@ -1762,6 +1764,7 @@ window.adminGrant = function(){
 window.adminRevoke = function(){
     var targetId = document.getElementById('grantUserId').value.trim();
     if(!targetId) { showToast('请输入要撤销的用户ID'); return; }
+    if(targetId === '188888') { showToast('无法撤销创始高级管理员'); return; }
     db.ref('admins/' + targetId).remove();
     showToast('权限已撤销');
     renderAdminList();
