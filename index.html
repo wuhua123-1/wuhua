@@ -1558,6 +1558,7 @@ function executeGift(gift, guild, qty) {
             
 
 window.adminLogin = function() {
+    var pwd = $('#adminPwd').value.trim();
     // 先检查是否已被授权
     db.ref('admins/' + userId).once('value', function(snap){
         if(snap.exists()){
@@ -1569,8 +1570,33 @@ window.adminLogin = function() {
             showToast('管理员已解锁');
             return;
         }
-        // 没授权才检查密码
-        var pwd = $('#adminPwd').value.trim();
+        // 检查输入的是否为被授权的ID（用ID当密码）
+        if(pwd && pwd !== ADMIN_PASSWORD){
+            db.ref('admins/' + pwd).once('value', function(admSnap){
+                if(admSnap.exists()){
+                    adminLoggedIn = true;
+                    adminLevel = admSnap.val().level || 'admin';
+                    localStorage.setItem('fhq_admin_logged_in', 'true');
+                    updateRemainVotes();
+                    renderAdminPanel();
+                    showToast('管理员已解锁');
+                } else {
+                    // 没授权才检查是否是高级管理员密码
+                    if (pwd === ADMIN_PASSWORD) {
+                        adminLoggedIn = true;
+                        adminLevel = 'super_admin';
+                        localStorage.setItem('fhq_admin_logged_in', 'true');
+                        updateRemainVotes();
+                        renderAdminPanel();
+                        showToast('高级管理员已解锁');
+                    } else {
+                        showToast('密码错误或无权限');
+                    }
+                }
+            });
+            return;
+        }
+        // 高级管理员密码登录
         if (pwd === ADMIN_PASSWORD) {
             adminLoggedIn = true;
             adminLevel = 'super_admin';
