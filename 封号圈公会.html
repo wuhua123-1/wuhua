@@ -903,9 +903,41 @@
                 height: 70px;
             }
         }
+        /* 豪气播报 */
+.broadcast-bar {
+    position: fixed;
+    top: 80px;
+    left: 0;
+    right: 0;
+    z-index: 1500;
+    pointer-events: none;
+    display: flex;
+    justify-content: center;
+}
+.broadcast-item {
+    position: absolute;
+    white-space: nowrap;
+    padding: 10px 24px;
+    border-radius: 30px;
+    background: rgba(22,22,30,0.95);
+    border: 1px solid #FFB800;
+    box-shadow: 0 0 30px rgba(255,184,0,0.5), 0 0 60px rgba(255,184,0,0.2);
+    color: #FFB800;
+    font-weight: 700;
+    font-size: 0.9rem;
+    animation: broadcastFly 4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    pointer-events: none;
+}
+@keyframes broadcastFly {
+    0% { transform: translateX(-120vw); opacity: 0; }
+    10% { transform: translateX(0); opacity: 1; }
+    80% { transform: translateX(0); opacity: 1; }
+    100% { transform: translateX(120vw); opacity: 0; }
+}
     </style>
 </head>
 <body>
+<div class="broadcast-bar" id="broadcastBar"></div>
 <div id="registerOverlay" style="position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;">
     <div style="background:#16161e;border-radius:18px;padding:30px 24px;text-align:center;max-width:400px;width:90%;border:1px solid rgba(123,47,247,0.4);box-shadow:0 0 40px rgba(123,47,247,0.2);">
         <div style="font-size:3rem;margin-bottom:12px;">🆔</div>
@@ -1068,6 +1100,19 @@ function saveUserData() {
 
 function loadData() {
     db.ref('voteData').on('value', (snapshot) => {
+    // 监听豪气播报
+db.ref('broadcast').on('value', function(broadcastSnapshot) {
+    var broadcastData = broadcastSnapshot.val();
+    if (broadcastData && broadcastData.text) {
+        var broadcastEl = document.createElement('div');
+        broadcastEl.className = 'broadcast-item';
+        broadcastEl.textContent = broadcastData.text;
+        document.getElementById('broadcastBar').appendChild(broadcastEl);
+        broadcastEl.addEventListener('animationend', function() {
+            broadcastEl.remove();
+        });
+    }
+});
         const data = snapshot.val();
         if (data && data.guilds) {
             appData.guilds = data.guilds;
@@ -1435,21 +1480,35 @@ function saveData(data) {
                 ], `<div style="margin-top:8px;">数量：<input class="gift-qty-input" id="giftQty" type="number" value="1" min="1"></div>`);
             };
 
-            function executeGift(gift, guild, qty) {
-                qty = qty || 1;
-                const total = gift.cost * qty;
-                if (appData.userPoints < total) {
-                    showToast(`钻石不足，需要💎${total}`);
-                    return;
-                }
-                appData.userPoints -= total;
-                guild.popularity += gift.pop * qty;
-                guild.svipLevel = calcSvipLevel(guild.popularity);
-             saveData(appData); // 先保存数据
+function executeGift(gift, guild, qty) {
+    qty = qty || 1;
+    const total = gift.cost * qty;
+    if (appData.userPoints < total) {
+        showToast(`钻石不足，需要💎${total}`);
+        return;
+    }
+    appData.userPoints -= total;
+    guild.popularity += gift.pop * qty;
+    guild.svipLevel = calcSvipLevel(guild.popularity);
+    saveData(appData);
     updatePointDisplay(true);
-    closeModal(); // 关闭礼物面板
+    closeModal();
     for (let i = 0; i < Math.min(qty, 5); i++) {
         setTimeout(() => spawnGiftImageFX(gift.img), i * 200);
+    }
+    // 豪气播报（火箭/法拉利/战斗机 + 管理员）
+    if (adminLoggedIn && (gift.id === 'g3' || gift.id === 'g4' || gift.id === 'g5')) {
+        var broadcastEl = document.createElement('div');
+        broadcastEl.className = 'broadcast-item';
+        broadcastEl.textContent = '🔔 管理员雾化 豪掷 ' + gift.name + ' x' + qty + ' 送给 ' + guild.name;
+        document.getElementById('broadcastBar').appendChild(broadcastEl);
+        db.ref('broadcast').set({
+            text: '🔔 管理员雾化 豪掷 ' + gift.name + ' x' + qty + ' 送给 ' + guild.name,
+            time: Date.now()
+        });
+        broadcastEl.addEventListener('animationend', function() {
+            broadcastEl.remove();
+        });
     }
     showToast(`赠送${qty}个${gift.name}成功！人气+${gift.pop*qty}`);
     setTimeout(refreshAllUI, 500);
@@ -1518,10 +1577,15 @@ function renderAdminPanel() {
     <input class="input-field" id="newAvatar" placeholder="头像链接">
     <input class="input-field" id="newHistory" placeholder="简介">
     <button class="btn btn-primary" onclick="adminCreateGuild()">创建</button>
-    <hr>💎加钻石
-    <input class="input-field" id="addPoints" value="1000" type="number">
-    <button class="btn btn-gold" onclick="adminAddPoints()">添加</button>
-    <hr><button class="btn btn-outline" onclick="exportData()">导出数据</button>`;
+    <hr>💎加钻石（自己）
+<input class="input-field" id="addPoints" value="1000" type="number">
+<button class="btn btn-gold" onclick="adminAddPoints()">添加给自己</button>
+<hr>💎指定ID加钻石
+<input class="input-field" id="targetUserId" placeholder="输入用户ID">
+<input class="input-field" id="targetPoints" value="1000" type="number">
+    <button class="btn btn-gold" onclick="adminAddPointsToUser()">添加给指定用户</button>
+<hr><button class="btn btn-outline" onclick="exportData()">导出数据</button>
+<hr><button class="btn btn-outline" onclick="adminClearAll()" style="color:#f55;border-color:#f55;">🗑️ 一键清空排行榜</button>`;
     renderAdminGuildList();
 }
 
@@ -1571,6 +1635,39 @@ window.adminAddPoints = function() {
     appData.userPoints += amt;
     updatePointDisplay(true);
     showToast(`已添加${amt}钻石`); renderAdminPanel();
+};
+
+window.adminAddPointsToUser = function() {
+    var targetId = $('#targetUserId')?.value.trim();
+    var amt = parseInt($('#targetPoints')?.value) || 0;
+    if (!targetId || amt <= 0) { showToast('请输入有效的用户ID和钻石数量'); return; }
+    db.ref('users/' + targetId).once('value', function(snapshot) {
+        if (snapshot.exists()) {
+            var userData = snapshot.val();
+            userData.userPoints = (userData.userPoints || 0) + amt;
+            db.ref('users/' + targetId).set(userData);
+            showToast(`已给用户 ${targetId} 添加 ${amt} 钻石`);
+        } else {
+            showToast('该用户ID不存在');
+        }
+    });
+};
+
+window.adminClearAll = function() {
+    showModal('⚠️ 确认清空', '确定要清空所有公会的票数和人气值吗？此操作不可恢复！', [
+        {text:'取消', cls:'btn-outline', callback:()=>{}},
+        {text:'🗑️ 确认清空', cls:'btn-outline', callback:()=>{
+            appData.guilds.forEach(g => {
+                g.votes = 0;
+                g.popularity = 0;
+                g.svipLevel = 0;
+            });
+            saveData(appData);
+            refreshAllUI();
+            renderAdminPanel();
+            showToast('排行榜已清空');
+        }}
+    ]);
 };
 
 window.exportData = function() {
