@@ -1671,7 +1671,7 @@ window.adminShowTab = function(tab) {
 };
 
 function loadAdminChat() {
-    db.ref('admin_chat/' + userId).on('value', function(snapshot) {
+    db.ref('admin_chat/admin').on('value', function(snapshot) {
         var messages = snapshot.val() || {};
         var container = document.getElementById('adminChatMessages');
         if (!container) return;
@@ -1692,7 +1692,7 @@ window.adminSendMsg = function() {
     var input = document.getElementById('adminChatInput');
     var text = input.value.trim();
     if (!text) return;
-    db.ref('admin_chat/' + userId).push({ from: 'admin', text: text, time: Date.now(), type: 'text' });
+    db.ref('admin_chat/admin').push({ from: 'admin', text: text, time: Date.now(), type: 'text' });
     input.value = '';
 };
 
@@ -1701,13 +1701,13 @@ window.adminSendImg = function(fileInput) {
     if (!file) return;
     var reader = new FileReader();
     reader.onload = function(e) {
-        db.ref('admin_chat/' + userId).push({ from: 'admin', text: e.target.result, time: Date.now(), type: 'image' });
+        db.ref('admin_chat/admin').push({ from: 'admin', text: e.target.result, time: Date.now(), type: 'image' });
     };
     reader.readAsDataURL(file);
 };
 
 function loadUserChat() {
-    db.ref('admin_chat/' + userId).on('value', function(snapshot) {
+    db.ref('admin_chat/admin').on('value', function(snapshot) {
         var messages = snapshot.val() || {};
         var container = document.getElementById('userChatMessages');
         if (!container) return;
@@ -1731,7 +1731,7 @@ window.userSendMsg = function() {
     if (!input) return;
     var text = input.value.trim();
     if (!text || !userId) return;
-    db.ref('admin_chat/' + userId).push({ from: userId, text: text, time: Date.now(), type: 'text' });
+    db.ref('admin_chat/admin').push({ from: userId, text: text, time: Date.now(), type: 'text' });
     input.value = '';
 };
 
@@ -1740,7 +1740,7 @@ window.userSendImg = function(fileInput) {
     if (!file || !userId) return;
     var reader = new FileReader();
     reader.onload = function(e) {
-        db.ref('admin_chat/' + userId).push({ from: userId, text: e.target.result, time: Date.now(), type: 'image' });
+        db.ref('admin_chat/admin').push({ from: userId, text: e.target.result, time: Date.now(), type: 'image' });
     };
     reader.readAsDataURL(file);
 };
