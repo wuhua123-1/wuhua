@@ -1061,6 +1061,12 @@ const db = firebase.database();
                 { id: 'g7', name: '梦幻', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '梦幻公会创造美丽与奇迹。' },
                 { id: 'g8', name: '黎明', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '黎明象征希望，引领大家走向曙光。' },
                 { id: 'g9', name: '长安', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '长安承载古都之魂，展现王者风范。' }
+                { id: 'g9', name: '长安', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '长安承载古都之魂，展现王者风范。' },
+    { id: 'g10', name: '天竺', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '不知道' },
+    { id: 'g11', name: '炽阳', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '不知道' },
+    { id: 'g12', name: '风花雪月', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '不知道' },
+    { id: 'g13', name: '魔术图', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '不知道' }
+];
             ];
 
             function getDefaultData() {
@@ -1146,12 +1152,11 @@ broadcastEl.innerHTML = broadcastData.text;
 });        
                   
 function saveData(data) {
-    const guildsOnly = JSON.parse(JSON.stringify(data.guilds));
-    guildsOnly.forEach(g => delete g.svipLevel);
+    var guildsOnly = JSON.parse(JSON.stringify(data.guilds));
+    guildsOnly.forEach(function(g){ delete g.svipLevel; });
     db.ref('voteData').set({ guilds: guildsOnly, todayDate: data.todayDate || new Date().toDateString() });
     saveUserData();
 }
-
             function calcSvipLevel(p) {
                 if (p >= 20000) return 6;
                 if (p >= 12000) return 5;
@@ -1666,7 +1671,7 @@ window.adminShowTab = function(tab) {
 };
 
 function loadAdminChat() {
-    db.ref('chat_messages').on('value', function(snapshot) {
+    db.ref('admin_chat/' + userId').on('value', function(snapshot) {
         var messages = snapshot.val() || {};
         var container = document.getElementById('adminChatMessages');
         if (!container) return;
@@ -1687,7 +1692,7 @@ window.adminSendMsg = function() {
     var input = document.getElementById('adminChatInput');
     var text = input.value.trim();
     if (!text) return;
-    db.ref('chat_messages').push({ from: 'admin', text: text, time: Date.now(), type: 'text' });
+    db.ref('admin_chat/' + userId').push({ from: 'admin', text: text, time: Date.now(), type: 'text' });
     input.value = '';
 };
 
@@ -1696,13 +1701,13 @@ window.adminSendImg = function(fileInput) {
     if (!file) return;
     var reader = new FileReader();
     reader.onload = function(e) {
-        db.ref('chat_messages').push({ from: 'admin', text: e.target.result, time: Date.now(), type: 'image' });
+        db.ref('admin_chat/' + userId').push({ from: 'admin', text: e.target.result, time: Date.now(), type: 'image' });
     };
     reader.readAsDataURL(file);
 };
 
 function loadUserChat() {
-    db.ref('chat_messages').on('value', function(snapshot) {
+    db.ref('admin_chat/' + userId').on('value', function(snapshot) {
         var messages = snapshot.val() || {};
         var container = document.getElementById('userChatMessages');
         if (!container) return;
@@ -1726,7 +1731,7 @@ window.userSendMsg = function() {
     if (!input) return;
     var text = input.value.trim();
     if (!text || !userId) return;
-    db.ref('chat_messages').push({ from: userId, text: text, time: Date.now(), type: 'text' });
+    db.ref('admin_chat/' + userId').push({ from: userId, text: text, time: Date.now(), type: 'text' });
     input.value = '';
 };
 
@@ -1735,7 +1740,7 @@ window.userSendImg = function(fileInput) {
     if (!file || !userId) return;
     var reader = new FileReader();
     reader.onload = function(e) {
-        db.ref('chat_messages').push({ from: userId, text: e.target.result, time: Date.now(), type: 'image' });
+        db.ref('admin_chat/' + userId').push({ from: userId, text: e.target.result, time: Date.now(), type: 'image' });
     };
     reader.readAsDataURL(file);
 };
