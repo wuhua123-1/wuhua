@@ -1804,12 +1804,19 @@ window.adminRevoke = function(){
         adminLevel = 'admin';
         localStorage.removeItem('fhq_admin_logged_in');
         updateRemainVotes();
-        $('#adminPanel').style.display = 'none';
-        document.getElementById('adminPwd').style.display = 'block';
-        document.querySelector('#adminPage .btn-outline').style.display = 'block';
-        var adminInfoEl = document.getElementById('adminInfo');
-        if(adminInfoEl) adminInfoEl.style.display = 'none';
-        showToast('你的管理员权限已被撤销');
+        showModal('权限已撤销', '你的管理员权限已被撤销，请点击下方按钮退出登录', [
+            { text: '退出登录', cls: 'btn-outline', callback: function() {
+                $('#adminPanel').hide();
+                document.getElementById('adminPwd').style.display = 'block';
+                var loginBtn = document.querySelector('#adminPage .btn-outline');
+                if(loginBtn) loginBtn.style.display = 'block';
+                var adminInfoEl = document.getElementById('adminInfo');
+                if(adminInfoEl) adminInfoEl.remove();
+                var contactBtn = document.getElementById('contactAdminBtn');
+                if(contactBtn) contactBtn.style.display = 'block';
+                closeModal();
+            }}
+        ]);
     } else {
         showToast('权限已撤销');
     }
@@ -1992,10 +1999,13 @@ function init() {
     if (localStorage.getItem('fhq_admin_logged_in') === 'true') {
         adminLoggedIn = true;
         db.ref('admins/' + userId).once('value', function(snap){
-    if (snap.exists()) {
+if (snap.exists()) {
     adminLevel = snap.val().level || 'admin';
+    if (adminLevel === 'super_admin') adminLevel = 'admin';
 } else {
-    adminLevel = 'super_admin';
+    adminLoggedIn = false;
+    localStorage.removeItem('fhq_admin_logged_in');
+    updateRemainVotes();
 }
 });
     }
