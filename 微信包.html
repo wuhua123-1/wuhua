@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes, viewport-fit=cover">
+    <title>封号圈公会投票平台</title>
+    <style>
+        /* ========== 全局变量 ========== */
+        :root {
+            --bg-deep: #0D0D11;
+            --bg-card: rgba(22, 22, 30, 0.75);
+            --bg-card-solid: #16161e;
+            --neon-cyan: #00E0FF;
+            --deep-purple: #7B2FF7;
+            --gold: #FFB800;
+            --text-primary: #e8e8f0;
+            --text-secondary: #a0a0b8;
+            --text-muted: #6a6a7a;
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-glow: rgba(0, 224, 255, 0.5);
+            --shadow-card: 0 4px 32px rgba(0, 0, 0, 0.55), 0 1px 4px rgba(0, 0, 0, 0.3);
+            --shadow-elevated: 0 8px 48px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0, 224, 255, 0.08);
+            --radius-lg: 18px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+            --transition-fast: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-smooth: 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+            --font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+        }
+
+        /* ========== 基础重置 ========== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg-deep);
+            font-family: var(--font-family);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+            line-height: 1.5;
+        }
+
+        /* 低噪点背景纹理 */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.025;
+            background-image: url("data:image/svg+xml,%3Csvg width='280' height='280' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+            background-size: 280px 280px;
+        }
+
+        /* 主容器 */
+        .app-container {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 16px 16px 100px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* ========== 顶部栏 ========== */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 14px 18px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-subtle);
+            box-shadow: var(--shadow-card);
+            position: sticky;
+            top: 12px;
+            z-index: 100;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            letter-spacing: 0.5px;
+            color: #fff;
+        }
+
+        .logo-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--neon-cyan);
+            box-shadow: 0 0 14px var(--neon-cyan), 0 0 28px rgba(0, 224, 255, 0.4);
+            animation: logoPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes logoPulse {
+            0%, 100% {
+                box-shadow: 0 0 14px var(--neon-cyan), 0 0 28px rgba(0, 224, 255, 0.4);
+            }
+            50% {
+                box-shadow: 0 0 22px var(--neon-cyan), 0 0 44px rgba(0, 224, 255, 0.7);
+            }
+        }
+
+        .point-balance {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.45);
+            border-radius: 40px;
+            padding: 8px 16px;
+            border: 1px solid rgba(255, 184, 0, 0.3);
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--gold);
+            letter-spacing: 0.3px;
+        }
+
+        .point-icon {
+            font-size: 1.2rem;
+            filter: drop-shadow(0 0 6px rgba(255, 184, 0, 0.6));
+        }
+
+        .point-num {
+            font-variant-numeric: tabular-nums;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: all var(--transition-smooth);
+        }
+
+        .point-num.flash {
+            animation: numFlash 0.5s ease-out;
+        }
+
+        @keyframes numFlash {
+            0%, 100% {
+                text-shadow: 0 0 0px transparent;
+            }
+            40% {
+                text-shadow: 0 0 20px var(--gold), 0 0 40px var(--gold);
+            }
+        }
+
+        .btn-sign {
+            padding: 8px 18px;
+            border-radius: 40px;
+            border: 1px solid rgba(0, 224, 255, 0.4);
+            background: rgba(0, 224, 255, 0.08);
+            color: var(--neon-cyan);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all var(--transition-fast);
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+            letter-spacing: 0.3px;
+        }
+
+        .btn-sign:hover {
+            background: rgba(0, 224, 255, 0.18);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 20px rgba(0, 224, 255, 0.3);
+            transform: scale(1.04);
+        }
+
+        .btn-sign:active {
+            transform: scale(0.95);
+        }
+
+        .btn-sign.signed {
+            border-color: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.04);
+            color: #6a6a7a;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .btn-sign.blink-call {
+            animation: signBlink 1.2s ease-in-out infinite;
+            border-color: var(--gold);
+            color: var(--gold);
+            background: rgba(255, 184, 0, 0.1);
+        }
+
+        @keyframes signBlink {
+            0%, 100% {
+                box-shadow: 0 0 8px rgba(255, 184, 0, 0.2);
+            }
+            50% {
+                box-shadow: 0 0 28px rgba(255, 184, 0, 0.7), 0 0 50px rgba(255, 184, 0, 0.3);
+            }
+        }
+
+        /* ========== 导航标签 ========== */
+        .nav-tabs {
+            display: flex;
+            gap: 6px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: var(--radius-lg);
+            padding: 5px;
+            border: 1px solid var(--border-subtle);
+            box-shadow: var(--shadow-card);
+        }
+
+        .nav-tab {
+            flex: 1;
+            text-align: center;
+            padding: 11px 10px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            letter-spacing: 0.4px;
+            color: var(--text-secondary);
+            transition: all var(--transition-smooth);
+            position: relative;
+            border: none;
+            background: transparent;
+        }
+
+        .nav-tab:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .nav-tab.active {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 0 20px rgba(0, 224, 255, 0.15);
+        }
+
+        .nav-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 3px;
+            border-radius: 4px;
+            background: var(--neon-cyan);
+            box-shadow: 0 0 12px var(--neon-cyan);
+        }
+
+        /* ========== 页面切换 ========== */
+        .page {
+            display: none;
+            animation: pageIn 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes pageIn {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ========== 卡片样式 ========== */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-subtle);
+            box-shadow: var(--shadow-card);
+            padding: 16px 18px;
+            transition: all var(--transition-smooth);
+        }
+
+        .card-header {
+            font-weight: 700;
+            font-size: 1rem;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-header .icon-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--neon-cyan);
+            box-shadow: 0 0 10px var(--neon-cyan);
+        }
+
+        /* ========== 公会条目 ========== */
+        .guild-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: var(--radius-md);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            position: relative;
+            background: rgba(255, 255, 255, 0.015);
+            margin-bottom: 6px;
+            user-select: none;
+        }
+
+        .guild-row:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.1);
+            transform: translateX(2px);
+        }
+
+        .guild-row.selected {
+            border-color: var(--neon-cyan) !important;
+            box-shadow: 0 0 18px rgba(0, 224, 255, 0.2), 0 4px 16px rgba(0, 0, 0, 0.4);
+            background: rgba(0, 224, 255, 0.06);
+            transform: translateY(-2px);
+            z-index: 2;
+        }
+
+        .guild-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: #2a2a38;
+            border: 2px solid rgba(255, 255, 255, 0.12);
+            object-fit: cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: #888;
+            overflow: hidden;
+            transition: all var(--transition-fast);
+        }
+
+        .guild-row.selected .guild-avatar {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 14px rgba(0, 224, 255, 0.35);
+        }
+
+        .guild-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .guild-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #e8e8f0;
+            letter-spacing: 0.3px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .guild-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Top 排名徽章 */
+        .top-rank-badge {
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #333;
+            color: #ccc;
+            letter-spacing: 0.5px;
+        }
+
+        .top-rank-1 {
+            background: linear-gradient(135deg, #FFD700, #FFB800);
+            color: #0D0D11;
+        }
+
+        .top-rank-2 {
+            background: linear-gradient(135deg, #C0C0C0, #A0A0A0);
+            color: #0D0D11;
+        }
+
+        .top-rank-3 {
+            background: linear-gradient(135deg, #CD7F32, #B87333);
+            color: #fff;
+        }
+
+        /* SVIP 等级标识 */
+        .svip-badge {
+            display: inline-block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            transition: all var(--transition-fast);
+            position: relative;
+            z-index: 1;
+        }
+
+        .svip-1 {
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: #ccc;
+        }
+
+        .svip-2 {
+            border: 1px solid #5bc0de;
+            color: #5bc0de;
+            box-shadow: 0 0 8px rgba(91, 192, 222, 0.3);
+        }
+
+        .svip-3 {
+            border: 1px solid #9b59ff;
+            color: #b388ff;
+            box-shadow: 0 0 12px rgba(123, 47, 247, 0.4);
+        }
+
+        .svip-4 {
+            border: 1px solid #ff8c42;
+            color: #ffa366;
+            box-shadow: 0 0 16px rgba(255, 140, 66, 0.45);
+            animation: svip4Flow 2s linear infinite;
+        }
+
+        .svip-5 {
+            border: 1px solid #ffb800;
+            color: #ffcc40;
+            box-shadow: 0 0 20px rgba(255, 184, 0, 0.55), 0 0 40px rgba(255, 184, 0, 0.2);
+            animation: svip5Flow 1.8s linear infinite;
+        }
+
+        .svip-6 {
+            color: #fff;
+            position: relative;
+            z-index: 1;
+        }
+
+        .svip-6::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, #ff0080, #ff8c00, #ffe000, #00e0ff, #7b2ff7);
+            z-index: -1;
+            animation: svip6Flow 1.5s linear infinite;
+        }
+
+        @keyframes svip4Flow {
+            0%, 100% {
+                box-shadow: 0 0 16px rgba(255, 140, 66, 0.45);
+            }
+            50% {
+                box-shadow: 0 0 28px rgba(255, 140, 66, 0.8);
+            }
+        }
+
+        @keyframes svip5Flow {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(255, 184, 0, 0.55), 0 0 40px rgba(255, 184, 0, 0.2);
+            }
+            50% {
+                box-shadow: 0 0 35px rgba(255, 184, 0, 0.9), 0 0 60px rgba(255, 184, 0, 0.4);
+            }
+        }
+
+        @keyframes svip6Flow {
+            0%, 100% {
+                filter: hue-rotate(0deg);
+            }
+            50% {
+                filter: hue-rotate(30deg);
+            }
+        }
+
+        .guild-votes {
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .guild-votes .vote-count {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #fff;
+            letter-spacing: 0.3px;
+        }
+
+        .guild-votes .popularity {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            display: inline-block;
+        }
+
+        .radio-custom {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            flex-shrink: 0;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .guild-row.selected .radio-custom {
+            border-color: var(--neon-cyan);
+            background: var(--neon-cyan);
+            box-shadow: 0 0 14px rgba(0, 224, 255, 0.6);
+        }
+
+        .radio-custom::after {
+            content: '';
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #0D0D11;
+            transform: scale(0);
+            transition: transform var(--transition-fast);
+        }
+
+        .guild-row.selected .radio-custom::after {
+            transform: scale(1);
+        }
+
+        .crown-icon {
+            font-size: 1.3rem;
+            filter: drop-shadow(0 0 8px rgba(255, 184, 0, 0.8));
+            animation: crownFloat 1.6s ease-in-out infinite;
+        }
+
+        @keyframes crownFloat {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-4px);
+            }
+        }
+
+        /* 进度条 */
+        .progress-wrap {
+            height: 6px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.06);
+            overflow: hidden;
+            margin-top: 4px;
+            width: 100%;
+            min-width: 60px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 10px;
+            background: var(--neon-cyan);
+            box-shadow: 0 0 10px rgba(0, 224, 255, 0.5);
+            transition: width 0.6s cubic-bezier(0.22, 0.61, 0.36, 1);
+            width: 0%;
+        }
+
+        /* 投票控制 */
+        .vote-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 14px;
+        }
+
+        .vote-input {
+            width: 60px;
+            padding: 10px 8px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-sm);
+            color: #fff;
+            font-weight: 600;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 40px;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.9rem;
+            transition: all var(--transition-fast);
+            position: relative;
+            overflow: hidden;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--neon-cyan);
+            color: #0D0D11;
+            box-shadow: 0 0 18px rgba(0, 224, 255, 0.35);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 30px rgba(0, 224, 255, 0.6);
+            transform: scale(1.04);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+        }
+
+        .btn-outline:hover {
+            border-color: #fff;
+            box-shadow: 0 0 14px rgba(255, 255, 255, 0.15);
+            transform: scale(1.03);
+        }
+
+        .btn-gold {
+            background: var(--gold);
+            color: #0D0D11;
+            box-shadow: 0 0 18px rgba(255, 184, 0, 0.35);
+        }
+
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0);
+            animation: rippleAnim 0.6s ease-out;
+            pointer-events: none;
+        }
+
+        @keyframes rippleAnim {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        .admin-infinite-badge {
+            background: var(--deep-purple);
+            color: #fff;
+            font-size: 0.65rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 6px;
+            font-weight: 600;
+        }
+
+        /* 模态框 */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 999;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-dialog {
+            background: var(--bg-card-solid);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-subtle);
+            box-shadow: var(--shadow-elevated);
+            padding: 24px 20px;
+            max-width: 500px;
+            width: 90%;
+            animation: modalIn 0.35s ease;
+            text-align: center;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .gift-qty-input {
+            width: 70px;
+            padding: 6px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-sm);
+            color: #fff;
+            font-weight: 600;
+            text-align: center;
+            margin-left: 8px;
+        }
+
+        .gift-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 10px;
+            margin: 14px 0;
+        }
+
+        .gift-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: var(--radius-md);
+            padding: 12px 8px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all var(--transition-fast);
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .gift-item:hover {
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: scale(1.06);
+        }
+
+        .gift-icon {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+            margin: 0 auto 4px;
+            display: block;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+        }
+
+        /* 特效层 */
+        .fx-layer {
+            position: fixed;
+            pointer-events: none;
+            z-index: 998;
+            inset: 0;
+        }
+
+        .fx-particle {
+            position: absolute;
+            animation: fxUp 2s ease-out forwards;
+            font-size: 2rem;
+            filter: drop-shadow(0 0 12px currentColor);
+        }
+
+        @keyframes fxUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-300px) scale(0.3) rotate(30deg);
+            }
+        }
+
+        /* 礼物飞入飞出特效 */
+        .fx-gift-img {
+            position: fixed;
+            z-index: 1000;
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            pointer-events: none;
+            animation-duration: 0.8s;
+            animation-fill-mode: forwards;
+        }
+
+        .fx-gift-img.fly-in {
+            animation-name: giftFlyIn;
+        }
+
+        .fx-gift-img.fly-out {
+            animation-name: giftFlyOut;
+        }
+
+        @keyframes giftFlyIn {
+            from {
+                transform: translate(-200vw, -50%) scale(0.3);
+                opacity: 0;
+            }
+            to {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes giftFlyOut {
+            from {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+            to {
+                transform: translate(200vw, -50%) scale(0.3);
+                opacity: 0;
+            }
+        }
+
+        /* 豪气榜前三 */
+        .rank-top3 .guild-row:nth-child(1) {
+            border-color: rgba(255, 184, 0, 0.5);
+            background: rgba(255, 184, 0, 0.06);
+            box-shadow: 0 0 20px rgba(255, 184, 0, 0.2);
+        }
+
+        .rank-top3 .guild-row:nth-child(2) {
+            border-color: rgba(192, 192, 192, 0.4);
+            background: rgba(192, 192, 192, 0.04);
+            box-shadow: 0 0 14px rgba(192, 192, 192, 0.12);
+        }
+
+        .rank-top3 .guild-row:nth-child(3) {
+            border-color: rgba(180, 120, 60, 0.4);
+            background: rgba(180, 120, 60, 0.04);
+            box-shadow: 0 0 14px rgba(180, 120, 60, 0.12);
+        }
+
+        .admin-card {
+            border: 1px solid rgba(123, 47, 247, 0.3);
+            box-shadow: 0 0 20px rgba(123, 47, 247, 0.1);
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: var(--radius-sm);
+            color: #fff;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .guild-detail-panel {
+            background: var(--bg-card-solid);
+            border: 1px solid var(--neon-cyan);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-top: 8px;
+            box-shadow: 0 0 30px rgba(0, 224, 255, 0.15);
+            animation: detailIn 0.3s ease;
+        }
+
+        @keyframes detailIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .app-container {
+                padding: 8px 8px 80px;
+            }
+            .gift-icon {
+                width: 36px;
+                height: 36px;
+            }
+            .fx-gift-img {
+                width: 70px;
+                height: 70px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container" id="appContainer">
+        <div class="top-bar">
+            <div class="logo-area"><span class="logo-dot"></span>封号圈</div>
+            <div class="point-balance"><span>💎</span> <span class="point-num" id="pointNum">0</span> 点卷</div>
+            <button class="btn-sign blink-call" id="btnSign" onclick="doSign()">🎁 签到领点卷</button>
+        </div>
+        <div class="nav-tabs" id="navTabs">
+            <button class="nav-tab active" data-page="votePage">🗳️ 投票</button>
+            <button class="nav-tab" data-page="rankPage">🏆 豪气榜</button>
+            <button class="nav-tab" data-page="adminPage">⚙️ 管理</button>
+        </div>
+        <div class="page active" id="votePage">
+            <div class="card">
+                <div class="card-header"><span class="icon-dot"></span>选择公会进行投票 <span id="adminVoteBadge" class="admin-infinite-badge" style="display:none;">⚡无限</span></div>
+                <div id="guildListVote"></div>
+                <div id="guildDetailContainer"></div>
+                <div class="vote-controls">
+                    <span>今日剩余：<span id="remainVotes">5</span> 票</span>
+                    <input type="number" class="vote-input" id="voteAmount" value="1" min="1" onchange="clampVoteAmount()">
+                    <button class="btn btn-primary" onclick="submitVote()">🗳️ 投票</button>
+                    <button class="btn btn-gold" onclick="openGiftPanel()">🎁 送礼</button>
+                </div>
+            </div>
+        </div>
+        <div class="page" id="rankPage">
+            <div class="card rank-top3">
+                <div class="card-header"><span class="icon-dot" style="background:#FFB800;"></span>豪气榜 · 人气排行</div>
+                <div id="rankList"></div>
+            </div>
+        </div>
+        <div class="page" id="adminPage">
+            <div class="card admin-card">
+                <div class="card-header"><span class="icon-dot" style="background:#7B2FF7;"></span>管理端</div>
+                <input type="password" class="input-field" id="adminPwd" placeholder="管理密码（）">
+                <button class="btn btn-outline" onclick="adminLogin()" style="width:100%;">🔓 验证</button>
+                <div id="adminPanel" style="display:none;margin-top:12px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="fx-layer" id="fxLayer"></div>
+    <div id="modalContainer"></div>
+    <script>
+        (function() {
+            const STORAGE_KEY = 'fhq_v9_final';
+            const DEFAULT_AVATAR = 'https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAET8eRp_B6XwWRJlAfp00EYyC7kG8X0OQACaiYAAsfO4Vegas-RHCjA_jsE.jpg';
+            const DEFAULT_GUILDS = [
+                { id: 'g1', name: '天堂', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '天堂公会成立于2024年，以秩序和守护为核心理念。' },
+                { id: 'g2', name: '罪恶', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '罪恶公会诞生于混沌之中，行事不羁但坚守正义。' },
+                { id: 'g3', name: '深海', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '深海公会如海洋般深邃，擅长隐秘行动。' },
+                { id: 'g4', name: '禁区', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '禁区公会把守险要，挑战者将面对钢铁防线。' },
+                { id: 'g5', name: '漫游', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '漫游公会由自由探险家组成，追寻未知。' },
+                { id: 'g6', name: '净网阁', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '净网阁维护网络净土，是虚拟清道夫。' },
+                { id: 'g7', name: '梦幻', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '梦幻公会创造美丽与奇迹。' },
+                { id: 'g8', name: '黎明', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '黎明象征希望，引领大家走向曙光。' },
+                { id: 'g9', name: '长安', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '长安承载古都之魂，展现王者风范。' }
+            ];
+
+            function getDefaultData() {
+                return {
+                    guilds: JSON.parse(JSON.stringify(DEFAULT_GUILDS)),
+                    userPoints: 500,
+                    todayVotesUsed: 0,
+                    todayDate: new Date().toDateString(),
+                    signedToday: false
+                };
+            }
+
+            function loadData() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    if (raw) {
+                        const data = JSON.parse(raw);
+                        if (data.todayDate !== new Date().toDateString()) {
+                            data.todayVotesUsed = 0;
+                            data.todayDate = new Date().toDateString();
+                            data.signedToday = false;
+                        }
+                        data.guilds.forEach(g => {
+                            g.svipLevel = calcSvipLevel(g.popularity || 0);
+                            if (!g.history) g.history = '暂无历史。';
+                        });
+                        return data;
+                    }
+                } catch (e) {}
+                return getDefaultData();
+            }
+
+            function saveData(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
+
+            function calcSvipLevel(p) {
+                if (p >= 20000) return 6;
+                if (p >= 12000) return 5;
+                if (p >= 8000) return 4;
+                if (p >= 4000) return 3;
+                if (p >= 1000) return 2;
+                if (p >= 100) return 1;
+                return 0;
+            }
+
+            let appData = loadData();
+            let selectedGuildId = null;
+            let adminLoggedIn = false;
+            const ADMIN_PASSWORD = '雾化牛逼';
+
+            const $ = s => document.querySelector(s);
+            const pointNumEl = $('#pointNum');
+            const btnSignEl = $('#btnSign');
+            const remainVotesEl = $('#remainVotes');
+            const voteAmountEl = $('#voteAmount');
+            const guildListVote = $('#guildListVote');
+            const guildDetailContainer = $('#guildDetailContainer');
+            const rankList = $('#rankList');
+            const fxLayer = $('#fxLayer');
+            const modalContainer = $('#modalContainer');
+            const navTabs = $('#navTabs');
+            const adminVoteBadge = $('#adminVoteBadge');
+
+            function updatePointDisplay(anim) {
+                pointNumEl.textContent = appData.userPoints.toLocaleString();
+                if (anim) {
+                    pointNumEl.classList.add('flash');
+                    setTimeout(() => pointNumEl.classList.remove('flash'), 500);
+                }
+                btnSignEl.textContent = appData.signedToday ? '✅ 已签到' : '🎁 签到领点卷';
+                btnSignEl.classList.toggle('signed', appData.signedToday);
+                btnSignEl.classList.toggle('blink-call', !appData.signedToday);
+            }
+
+            function updateRemainVotes() {
+                if (adminLoggedIn) {
+                    remainVotesEl.textContent = '∞';
+                    voteAmountEl.max = 9999;
+                    adminVoteBadge.style.display = 'inline-block';
+                } else {
+                    const r = Math.max(0, 5 - appData.todayVotesUsed);
+                    remainVotesEl.textContent = r;
+                    voteAmountEl.max = r;
+                    adminVoteBadge.style.display = 'none';
+                }
+            }
+
+            function clampVoteAmount() {
+                let v = parseInt(voteAmountEl.value) || 0;
+                if (!adminLoggedIn) {
+                    const r = Math.max(0, 5 - appData.todayVotesUsed);
+                    if (v > r) v = r;
+                }
+                voteAmountEl.value = Math.max(0, v);
+            }
+
+            function getSvipClass(l) {
+                if (l >= 6) return 'svip-6';
+                if (l >= 5) return 'svip-5';
+                if (l >= 4) return 'svip-4';
+                if (l >= 3) return 'svip-3';
+                if (l >= 2) return 'svip-2';
+                if (l >= 1) return 'svip-1';
+                return '';
+            }
+
+            function getSvipLabel(l) {
+                if (l >= 6) return 'SVIP6 👑';
+                if (l >= 5) return 'SVIP5';
+                if (l >= 4) return 'SVIP4';
+                if (l >= 3) return 'SVIP3';
+                if (l >= 2) return 'SVIP2';
+                if (l >= 1) return 'SVIP1';
+                return '';
+            }
+
+            function getTopBadge(idx) {
+                if (idx === 0) return '<span class="top-rank-badge top-rank-1">Top1</span>';
+                if (idx === 1) return '<span class="top-rank-badge top-rank-2">Top2</span>';
+                if (idx === 2) return '<span class="top-rank-badge top-rank-3">Top3</span>';
+                return `<span class="top-rank-badge">Top${idx+1}</span>`;
+            }
+
+            function renderGuildRow(g, index, isRank, rankPos) {
+                const svipClass = getSvipClass(g.svipLevel);
+                const svipLabel = getSvipLabel(g.svipLevel);
+                const selected = selectedGuildId === g.id;
+                const crown = (isRank && rankPos === 1) ? '<span class="crown-icon">👑</span>' : '';
+                const avatarHtml = `<img src="${g.avatar||DEFAULT_AVATAR}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.textContent='${g.name[0]}';">`;
+                const maxPop = Math.max(1, ...appData.guilds.map(gg => gg.popularity));
+                const pct = Math.round((g.popularity / maxPop) * 100);
+                const popHtml = isRank ? `<div class="popularity">🔥 ${g.popularity.toLocaleString()}</div>` : '';
+                const progHtml = isRank ? `<div class="progress-wrap"><div class="progress-fill" style="width:${pct}%;${rankPos===1?'background:#FFB800':''}${rankPos===2?'background:#C0C0C0':''}${rankPos===3?'background:#B87333':''}"></div></div>` : '';
+                const svipHtml = (isRank && svipLabel) ? `<span class="svip-badge ${svipClass}">${svipLabel}</span>` : '';
+                const topBadge = !isRank ? getTopBadge(index) : '';
+                return `
+                <div class="guild-row ${selected?'selected':''}" data-guild-id="${g.id}" onclick="${isRank?'':'selectGuild(\''+g.id+'\')'}">
+                    <div class="guild-avatar">${avatarHtml}</div>
+                    <div class="guild-info">
+                        <div class="guild-name">${crown}${topBadge}${g.name}</div>
+                        <div class="guild-meta">${svipHtml}</div>
+                        ${progHtml}
+                    </div>
+                    <div class="guild-votes"><div class="vote-count">${g.votes.toLocaleString()} 票</div>${popHtml}</div>
+                    ${!isRank?'<div class="radio-custom"></div>':''}
+                </div>`;
+            }
+
+            function renderVotePage() {
+                const sorted = [...appData.guilds].sort((a, b) => b.votes - a.votes);
+                guildListVote.innerHTML = sorted.map((g, i) => renderGuildRow(g, i, false, 0)).join('');
+                if (selectedGuildId) {
+                    const row = guildListVote.querySelector(`[data-guild-id="${selectedGuildId}"]`);
+                    if (row) row.classList.add('selected');
+                }
+                renderGuildDetail();
+            }
+
+            function renderGuildDetail() {
+                if (!selectedGuildId) { guildDetailContainer.innerHTML = ''; return; }
+                const g = appData.guilds.find(gg => gg.id === selectedGuildId);
+                if (!g) return;
+                guildDetailContainer.innerHTML = `
+                <div class="guild-detail-panel">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                        <div class="guild-avatar" style="width:48px;height:48px;">
+                            <img src="${g.avatar||DEFAULT_AVATAR}" style="width:100%;height:100%;object-fit:cover;">
+                        </div>
+                        <div>
+                            <div style="font-weight:700;">${g.name}</div>
+                            ${getSvipLabel(g.svipLevel) ? `<span class="svip-badge ${getSvipClass(g.svipLevel)}">${getSvipLabel(g.svipLevel)}</span>` : ''}
+                        </div>
+                    </div>
+                    <div style="color:#a0a0b8;font-size:0.85rem;">📜 ${g.history||'暂无历史'}</div>
+                </div>`;
+            }
+
+            function renderRankPage() {
+                const sorted = [...appData.guilds].sort((a, b) => b.popularity - a.popularity);
+                rankList.innerHTML = sorted.map((g, i) => renderGuildRow(g, i, true, i + 1)).join('');
+            }
+
+            function selectGuild(id) {
+                selectedGuildId = id;
+                renderVotePage();
+            }
+
+            function refreshAllUI() {
+                updatePointDisplay();
+                updateRemainVotes();
+                renderVotePage();
+                renderRankPage();
+                if (adminLoggedIn) renderAdminPanel();
+            }
+
+            function spawnRipple(el) {
+                const r = document.createElement('span');
+                r.className = 'ripple';
+                const s = Math.max(el.offsetWidth, el.offsetHeight);
+                r.style.width = r.style.height = s + 'px';
+                r.style.left = '50%';
+                r.style.top = '50%';
+                r.style.marginLeft = -s / 2 + 'px';
+                r.style.marginTop = -s / 2 + 'px';
+                el.style.position = 'relative';
+                el.style.overflow = 'hidden';
+                el.appendChild(r);
+                r.addEventListener('animationend', () => r.remove());
+            }
+            document.addEventListener('click', e => {
+                const btn = e.target.closest('button');
+                if (btn) spawnRipple(btn);
+            });
+
+            function animateNumber(el, from, to, dur = 500) {
+                const start = performance.now();
+                const diff = to - from;
+                function step(ts) {
+                    const p = Math.min((ts - start) / dur, 1);
+                    const val = Math.round(from + diff * (1 - Math.pow(1 - p, 3)));
+                    el.textContent = val.toLocaleString();
+                    if (p < 1) requestAnimationFrame(step);
+                    else {
+                        el.textContent = to.toLocaleString();
+                        el.classList.add('flash');
+                        setTimeout(() => el.classList.remove('flash'), 500);
+                    }
+                }
+                requestAnimationFrame(step);
+            }
+
+            function spawnFX(emoji, count, ox, oy) {
+                const cx = ox * window.innerWidth,
+                    cy = oy * window.innerHeight;
+                for (let i = 0; i < count; i++) {
+                    const p = document.createElement('span');
+                    p.className = 'fx-particle';
+                    p.textContent = emoji;
+                    p.style.left = cx + 'px';
+                    p.style.top = cy + 'px';
+                    p.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+                    p.style.transform = `translate(${(Math.random()-0.5)*200}px, ${(Math.random()-0.5)*200}px)`;
+                    fxLayer.appendChild(p);
+                    p.addEventListener('animationend', () => p.remove());
+                }
+            }
+
+            function spawnGiftImageFX(imgUrl) {
+                const img = document.createElement('img');
+                img.src = imgUrl;
+                img.className = 'fx-gift-img fly-in';
+                img.style.left = '50%';
+                img.style.top = '50%';
+                img.style.transform = 'translate(-50%, -50%)';
+                fxLayer.appendChild(img);
+                img.addEventListener('animationend', function(e) {
+                    if (e.animationName === 'giftFlyIn') {
+                        img.classList.remove('fly-in');
+                        void img.offsetWidth;
+                        setTimeout(() => {
+                            if (img.parentNode) {
+                                img.classList.add('fly-out');
+                            }
+                        }, 1200);
+                    } else if (e.animationName === 'giftFlyOut') {
+                        img.remove();
+                    }
+                });
+            }
+
+            function showModal(title, msg, buttons, extra) {
+                modalContainer.innerHTML = `
+                <div class="modal-overlay" id="modalOverlay">
+                    <div class="modal-dialog">
+                        <div class="modal-title">${title}</div>
+                        <p style="color:#a0a0b8;">${msg}</p>
+                        ${extra||''}
+                        <div class="modal-btns">${buttons.map((b,i)=>`<button class="btn ${b.cls||'btn-primary'}" data-idx="${i}">${b.text}</button>`).join('')}</div>
+                    </div>
+                </div>`;
+                const overlay = $('#modalOverlay');
+                overlay.querySelectorAll('button[data-idx]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const idx = parseInt(btn.dataset.idx);
+                        const qtyInput = overlay.querySelector('.gift-qty-input');
+                        const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
+                        if (buttons[idx]?.callback) buttons[idx].callback(qty);
+                        closeModal();
+                    });
+                });
+                overlay.addEventListener('click', e => {
+                    if (e.target === overlay) closeModal();
+                });
+            }
+
+            function closeModal() { modalContainer.innerHTML = ''; }
+
+            function showToast(msg, emoji) {
+                showModal(emoji + ' 提示', msg, [{ text: '确定', cls: 'btn-primary', callback: () => {} }]);
+            }
+
+            window.doSign = function() {
+                if (appData.signedToday) { showToast('今日已签到'); return; }
+                appData.signedToday = true;
+                appData.userPoints += 500;
+                saveData(appData);
+                updatePointDisplay(true);
+                spawnFX('💰', 10, 0.85, 0.15);
+                showToast('签到成功！+500点卷');
+            };
+
+            window.submitVote = function() {
+                if (!selectedGuildId) { showToast('请先选择一个公会'); return; }
+                const guild = appData.guilds.find(g => g.id === selectedGuildId);
+                let amount = parseInt(voteAmountEl.value) || 0;
+                if (amount <= 0) { showToast('请输入有效票数'); return; }
+                if (!adminLoggedIn) {
+                    const rem = Math.max(0, 5 - appData.todayVotesUsed);
+                    if (amount > rem) { showToast(`剩余票数不足，最多${rem}票`); return; }
+                }
+                showModal('确认投票', `为 <b style="color:#00E0FF;">${guild.name}</b> 投出 <b style="color:#FFB800;">${amount}</b> 票？`, [
+                    { text: '取消', cls: 'btn-outline', callback: () => {} },
+                    { text: '✅ 确认', cls: 'btn-primary', callback: () => executeVote(guild, amount) }
+                ]);
+            };
+
+            function executeVote(guild, amount) {
+                const oldVotes = guild.votes;
+                guild.votes += amount;
+                if (!adminLoggedIn) appData.todayVotesUsed += amount;
+                appData.userPoints += amount * 1000;
+                guild.svipLevel = calcSvipLevel(guild.popularity);
+                saveData(appData);
+                const el = document.querySelector(`#guildListVote [data-guild-id="${guild.id}"] .vote-count`);
+                if (el) animateNumber(el, oldVotes, guild.votes);
+                updatePointDisplay(true);
+                updateRemainVotes();
+                spawnFX('🗳️', 12, 0.5, 0.4);
+                showToast(`投票成功！+${amount*1000}点卷`);
+                setTimeout(refreshAllUI, 600);
+            }
+
+            const GIFTS = [
+                { id: 'g1', name: '烤鸡', img: 'https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAET8j5p_CjVfsCCUFLSifUXmAYxUGXdYgAC5CYAAsfO4VcBruf_-UaM1jsE.png', cost: 200, pop: 300 },
+                { id: 'g2', name: '猪脚饭', img: 'https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAET8kJp_ClO11FvZInf7vftKOnuoNDz4wAC6CYAAsfO4Vfq8ZKELb8E9jsE.png', cost: 500, pop: 800 },
+                { id: 'g3', name: '法拉利', img: 'https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAET8ilp_ChOHKI62GdqWeUXqDyJFemvhQAC0CYAAsfO4VdUrxuu-1vGYDsE.png', cost: 1500, pop: 2500 },
+                { id: 'g4', name: '火箭', img: 'https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAET8k1p_CmYEclfbAXJrj2o-TQy8wABU_AAAvMmAALHzuFX44Ba3XWH5Gc7BA.png', cost: 3000, pop: 5000 },
+                { id: 'g5', name: '战斗机', img: 'https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAET8k5p_CnacCDICMtYyejGt-uWjaqJgQAC9CYAAsfO4VfqWTzaR9xbEDsE.png', cost: 5000, pop: 9000 }
+            ];
+
+            window.openGiftPanel = function() {
+                if (!selectedGuildId) { showToast('请先选择一个公会'); return; }
+                const guild = appData.guilds.find(g => g.id === selectedGuildId);
+                modalContainer.innerHTML = `
+                <div class="modal-overlay" id="giftOverlay">
+                    <div class="modal-dialog" style="max-width:550px;">
+                        <div class="modal-title">🎁 送礼给 <span style="color:#00E0FF;">${guild.name}</span></div>
+                        <p>余额：💎 ${appData.userPoints.toLocaleString()}</p>
+                        <div class="gift-grid">${GIFTS.map(g=>`<div class="gift-item" onclick="selectGift('${g.id}')"><img src="${g.img}" class="gift-icon">${g.name}<br><span class="gift-cost">💎${g.cost}</span></div>`).join('')}</div>
+                        <button class="btn btn-outline" id="btnCancelGift">取消</button>
+                    </div>
+                </div>`;
+                $('#btnCancelGift').addEventListener('click', closeModal);
+                $('#giftOverlay').addEventListener('click', e => { if (e.target.id === 'giftOverlay') closeModal(); });
+            };
+
+            window.selectGift = function(giftId) {
+                const gift = GIFTS.find(g => g.id === giftId);
+                const guild = appData.guilds.find(g => g.id === selectedGuildId);
+                showModal('确认送礼', `赠送 <b>${gift.name}</b> 给 <b>${guild.name}</b>？`, [
+                    { text: '取消', cls: 'btn-outline', callback: () => {} },
+                    { text: '🎁 确认', cls: 'btn-gold', callback: (qty) => executeGift(gift, guild, qty) }
+                ], `<div style="margin-top:8px;">数量：<input class="gift-qty-input" id="giftQty" type="number" value="1" min="1"></div>`);
+            };
+
+            function executeGift(gift, guild, qty) {
+                qty = qty || 1;
+                const total = gift.cost * qty;
+                if (appData.userPoints < total) {
+                    showToast(`点卷不足，需要💎${total}`);
+                    return;
+                }
+                appData.userPoints -= total;
+                guild.popularity += gift.pop * qty;
+                guild.svipLevel = calcSvipLevel(guild.popularity);
+                saveData(appData);
+                updatePointDisplay(true);
+                for (let i = 0; i < Math.min(qty, 5); i++) {
+                    setTimeout(() => spawnGiftImageFX(gift.img), i * 200);
+                }
+                showToast(`赠送${qty}个${gift.name}成功！人气+${gift.pop*qty}`);
+                setTimeout(refreshAllUI, 500);
+                closeModal();
+            }
+
+            window.adminLogin = function() {
+                if ($('#adminPwd').value.trim() === ADMIN_PASSWORD) {
+                    adminLoggedIn = true;
+                    updateRemainVotes();
+                    renderAdminPanel();
+                    showToast('管理员已解锁');
+                } else showToast('密码错误');
+            };
+
+            function renderAdminPanel() {
+                const panel = $('#adminPanel');
+                if (!panel) return;
+                panel.style.display = 'block';
+                panel.innerHTML = `
+                <b>公会管理</b>
+                <div id="adminGuildList" style="max-height:300px;overflow-y:auto;"></div>
+                <hr>➕创建公会
+                <input class="input-field" id="newName" placeholder="名称">
+                <input class="input-field" id="newAvatar" placeholder="头像链接">
+                <input class="input-field" id="newHistory" placeholder="简介">
+                <button class="btn btn-primary" onclick="adminCreateGuild()">创建</button>
+                <hr>💎加点卷
+                <input class="input-field" id="addPoints" value="1000" type="number">
+                <button class="btn btn-gold" onclick="adminAddPoints()">添加</button>
+                <hr><button class="btn btn-outline" onclick="exportData()">导出数据</button>`;
+                renderAdminGuildList();
+            }
+
+            function renderAdminGuildList() {
+                const el = $('#adminGuildList');
+                if (!el) return;
+                el.innerHTML = appData.guilds.map(g => `
+                <div style="display:flex;gap:8px;padding:6px;background:rgba(255,255,255,0.03);margin-bottom:4px;">
+                    <span style="flex:1;">${g.name}</span><span>票:${g.votes} 人气:${g.popularity}</span>
+                    <button onclick="adminEditGuild('${g.id}')">✏️</button>
+                    <button onclick="adminDeleteGuild('${g.id}')" style="color:#f55;">🗑️</button>
+                </div>`).join('');
+            }
+
+            window.adminEditGuild = function(id) {
+                const g = appData.guilds.find(gg => gg.id === id);
+                if (!g) return;
+                const name = prompt('名称', g.name); if (name) g.name = name;
+                const av = prompt('头像链接', g.avatar); if (av !== null) g.avatar = av || DEFAULT_AVATAR;
+                const hist = prompt('历史', g.history); if (hist !== null) g.history = hist || '暂无历史。';
+                saveData(appData); refreshAllUI(); renderAdminPanel();
+            };
+
+            window.adminDeleteGuild = function(id) {
+                if (appData.guilds.length <= 2) { showToast('至少保留2个公会'); return; }
+                showModal('确认删除', '确定删除该公会？', [
+                    { text: '取消', cls: 'btn-outline', callback: () => {} },
+                    { text: '删除', cls: 'btn-outline', callback: () => {
+                        appData.guilds = appData.guilds.filter(g => g.id !== id);
+                        if (selectedGuildId === id) selectedGuildId = null;
+                        saveData(appData); refreshAllUI(); renderAdminPanel();
+                    }}
+                ]);
+            };
+
+            window.adminCreateGuild = function() {
+                const name = $('#newName')?.value.trim(); if (!name) { showToast('输入名称'); return; }
+                const av = $('#newAvatar')?.value.trim() || DEFAULT_AVATAR;
+                const hist = $('#newHistory')?.value.trim() || '新公会，未来可期。';
+                appData.guilds.push({ id: 'g' + Date.now(), name, avatar: av, votes: 0, popularity: 0, history: hist });
+                saveData(appData); refreshAllUI(); renderAdminPanel(); showToast('创建成功');
+            };
+
+            window.adminAddPoints = function() {
+                const amt = parseInt($('#addPoints')?.value) || 0;
+                if (amt <= 0) return;
+                appData.userPoints += amt; saveData(appData); updatePointDisplay(true);
+                showToast(`已添加${amt}点卷`); renderAdminPanel();
+            };
+
+            window.exportData = function() {
+                const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'fhq_backup.json'; a.click();
+            };
+
+            navTabs.addEventListener('click', e => {
+                const tab = e.target.closest('.nav-tab'); if (!tab) return;
+                navTabs.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                const page = document.getElementById(tab.dataset.page);
+                if (page) page.classList.add('active');
+                if (tab.dataset.page === 'rankPage') renderRankPage();
+            });
+
+            function init() {
+                appData.guilds.forEach(g => {
+                    if (!g.avatar) g.avatar = DEFAULT_AVATAR;
+                    if (!g.history) g.history = '暂无历史记录。';
+                    g.svipLevel = calcSvipLevel(g.popularity || 0);
+                });
+                const today = new Date().toDateString();
+                if (appData.todayDate !== today) {
+                    appData.todayDate = today;
+                    appData.todayVotesUsed = 0;
+                    appData.signedToday = false;
+                }
+                saveData(appData);
+                refreshAllUI();
+                if (appData.guilds.length > 0) selectGuild(appData.guilds[0].id);
+                window.selectGuild = selectGuild;
+                window.clampVoteAmount = clampVoteAmount;
+            }
+            init();
+            console.log('🚀 封号圈完整版已启动 | 管理密码：雾化牛逼');
+        })();
+    </script>
+</body>
+</html>
