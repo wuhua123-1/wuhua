@@ -1564,6 +1564,7 @@ window.adminLogin = function() {
         if(snap.exists()){
             adminLoggedIn = true;
             adminLevel = snap.val().level || 'admin';
+if (adminLevel === 'super_admin') adminLevel = 'admin';
             localStorage.setItem('fhq_admin_logged_in', 'true');
             updateRemainVotes();
             renderAdminPanel();
@@ -1713,8 +1714,9 @@ window.adminShowTab = function(tab) {
     var content = document.getElementById('adminTabContent');
     if (!content) return;
     
-    if (tab === 'guild') {
-        content.innerHTML = '<b>公会管理</b><div id="adminGuildList" style="max-height:300px;overflow-y:auto;"></div><hr><b>创建公会</b><input class="input-field" id="newName" placeholder="名称"><input class="input-field" id="newAvatar" placeholder="头像链接"><input class="input-field" id="newHistory" placeholder="简介"><button class="btn btn-primary" onclick="adminCreateGuild()" style="width:100%;">创建</button>';
+    if (tab === 'guild' && adminLevel !== 'super_admin') { showToast('无权限'); return; }
+if (tab === 'guild') {
+    content.innerHTML = '<b>公会管理</b><div id="adminGuildList" style="max-height:300px;overflow-y:auto;"></div><hr><b>创建公会</b><input class="input-field" id="newName" placeholder="名称"><input class="input-field" id="newAvatar" placeholder="头像链接"><input class="input-field" id="newHistory" placeholder="简介"><button class="btn btn-primary" onclick="adminCreateGuild()" style="width:100%;">创建</button>';
         renderAdminGuildList();
     } else if (tab === 'diamond') {
         content.innerHTML = '<b>加钻石（自己）</b><input class="input-field" id="addPoints" value="1000" type="number"><button class="btn btn-gold" onclick="adminAddPoints()" style="width:100%;">添加给自己</button><hr><b>指定ID加钻石</b><input class="input-field" id="targetUserId" placeholder="输入用户ID"><input class="input-field" id="targetPoints" value="1000" type="number"><button class="btn btn-gold" onclick="adminAddPointsToUser()" style="width:100%;">添加给指定用户</button>';
@@ -1981,8 +1983,11 @@ function init() {
     if (localStorage.getItem('fhq_admin_logged_in') === 'true') {
         adminLoggedIn = true;
         db.ref('admins/' + userId).once('value', function(snap){
-    if (snap.exists()) adminLevel = snap.val().level || 'admin';
-    else adminLevel = 'super_admin';
+    if (snap.exists()) {
+    adminLevel = snap.val().level || 'admin';
+} else {
+    adminLevel = 'super_admin';
+}
 });
     }
     appData.guilds.forEach(g => {
@@ -2038,37 +2043,16 @@ if (!adminLoggedIn) {
 
 window.adminLogout = function() {
     adminLoggedIn = false;
+    adminLevel = 'admin';
     localStorage.removeItem('fhq_admin_logged_in');
     updateRemainVotes();
     $('#adminPanel').style.display = 'none';
-    var pwdInput = document.getElementById('adminPwd');
-    var loginBtn = document.querySelector('#adminPage .btn-outline');
-    if (pwdInput) pwdInput.style.display = 'block';
-    if (loginBtn) loginBtn.style.display = 'block';
+    document.getElementById('adminPwd').style.display = 'block';
+    document.querySelector('#adminPage .btn-outline').style.display = 'block';
     var adminInfoEl = document.getElementById('adminInfo');
     if (adminInfoEl) adminInfoEl.style.display = 'none';
-    // 退出后显示聊天按钮
     var contactBtn = document.getElementById('contactAdminBtn');
-    if (!contactBtn) {
-        contactBtn = document.createElement('button');
-        contactBtn.id = 'contactAdminBtn';
-        contactBtn.style.cssText = 'position:fixed;bottom:20px;right:20px;width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#7B2FF7,#00E0FF);border:none;color:#fff;font-size:1.3rem;z-index:1100;box-shadow:0 0 20px rgba(123,47,247,0.5);cursor:pointer;';
-        contactBtn.textContent = '💬';
-        contactBtn.onclick = function() {
-            document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active');});
-            document.querySelector('[data-page="adminPage"]').classList.add('active');
-            document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
-            document.getElementById('adminPage').classList.add('active');
-            var adminCard = document.querySelector('#adminPage .admin-card');
-            if (adminCard) {
-                adminCard.innerHTML = '<div class="card-header">💬 联系管理员</div><div style="display:flex;flex-direction:column;height:400px;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;"><div id="userChatMessages" style="flex:1;overflow-y:auto;padding:12px;"></div><div style="display:flex;padding:10px;border-top:1px solid rgba(255,255,255,0.1);"><input type="text" id="userChatInput" placeholder="输入消息..." style="flex:1;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:20px;color:#fff;font-size:0.85rem;" onkeydown="if(event.key===\'Enter\')userSendMsg()"><label style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;margin-left:8px;cursor:pointer;font-size:1.2rem;"><input type="file" accept="image/*,video/*" onchange="userSendImg(this)" style="display:none;">+</label></div></div>';
-                loadUserChat();
-            }
-        };
-        document.body.appendChild(contactBtn);
-    } else {
-        contactBtn.style.display = 'block';
-    }
+    if (contactBtn) contactBtn.style.display = 'block';
     showToast('已退出管理员');
 };
 
