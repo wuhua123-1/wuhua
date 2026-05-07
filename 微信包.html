@@ -1379,97 +1379,143 @@ const db = firebase.database();
     setTimeout(refreshAllUI, 500);
 }
 
-            window.adminLogin = function() {
-                if ($('#adminPwd').value.trim() === ADMIN_PASSWORD) {
-                    adminLoggedIn = true;
-                    updateRemainVotes();
-                    renderAdminPanel();
-                    showToast('管理员已解锁');
-                } else showToast('密码错误');
-            };
+window.adminLogin = function() {
+    if ($('#adminPwd').value.trim() === ADMIN_PASSWORD) {
+        adminLoggedIn = true;
+        localStorage.setItem('fhq_admin_logged_in', 'true');  // 记住登录状态
+        updateRemainVotes();
+        renderAdminPanel();
+        showToast('管理员已解锁');
+    } else {
+        showToast('密码错误');
+    }
+};
 
-            function renderAdminPanel() {
-                const panel = $('#adminPanel');
-                if (!panel) return;
-                panel.style.display = 'block';
-                panel.innerHTML = `
-                <b>公会管理</b>
-                <div id="adminGuildList" style="max-height:300px;overflow-y:auto;"></div>
-                <hr>➕创建公会
-                <input class="input-field" id="newName" placeholder="名称">
-                <input class="input-field" id="newAvatar" placeholder="头像链接">
-                <input class="input-field" id="newHistory" placeholder="简介">
-                <button class="btn btn-primary" onclick="adminCreateGuild()">创建</button>
-                <hr>💎加钻石
-                <input class="input-field" id="addPoints" value="1000" type="number">
-                <button class="btn btn-gold" onclick="adminAddPoints()">添加</button>
-                <hr><button class="btn btn-outline" onclick="exportData()">导出数据</button>`;
-                renderAdminGuildList();
-            }
+function renderAdminPanel() {
+    var pwdInput = document.getElementById('adminPwd');
+    var loginBtn = document.querySelector('#adminPage .btn-outline');
+    if (pwdInput) pwdInput.style.display = 'none';
+    if (loginBtn) loginBtn.style.display = 'none';
+    
+    var adminInfoEl = document.getElementById('adminInfo');
+    if (!adminInfoEl) {
+        adminInfoEl = document.createElement('div');
+        adminInfoEl.id = 'adminInfo';
+        adminInfoEl.style.textAlign = 'center';
+        adminInfoEl.style.marginBottom = '16px';
+        
+        var avatarDiv = document.createElement('div');
+        avatarDiv.style.cssText = 'width:50px;height:50px;border-radius:50%;background:#2a2a38;border:2px solid #7B2FF7;margin:0 auto 8px;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(123,47,247,0.5);';
+        avatarDiv.innerHTML = '<span style="font-size:1.5rem;filter:drop-shadow(0 0 8px #FFB800);">👑</span>';
+        adminInfoEl.appendChild(avatarDiv);
+        
+        var nameDiv = document.createElement('div');
+        nameDiv.style.cssText = 'font-weight:700;font-size:1.1rem;background:linear-gradient(135deg, #ff0080, #ff8c00, #ffe000, #00e0ff, #7b2ff7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;';
+        nameDiv.textContent = '雾化';
+        adminInfoEl.appendChild(nameDiv);
+        
+        var badgeDiv = document.createElement('div');
+        badgeDiv.style.cssText = 'font-size:0.7rem;color:#FFB800;margin-top:4px;';
+        badgeDiv.textContent = '🔰 管理员';
+        adminInfoEl.appendChild(badgeDiv);
+        
+        var logoutBtn = document.createElement('button');
+        logoutBtn.style.cssText = 'margin-top:8px;padding:4px 12px;border-radius:20px;border:1px solid #f55;background:transparent;color:#f55;font-size:0.7rem;';
+        logoutBtn.textContent = '退出管理员';
+        logoutBtn.onclick = function() { adminLogout(); };
+        adminInfoEl.appendChild(logoutBtn);
+        
+        var adminCard = document.querySelector('#adminPage .admin-card');
+        if (adminCard) adminCard.insertBefore(adminInfoEl, adminCard.firstChild);
+    } else {
+        adminInfoEl.style.display = 'block';
+    }
+    
+    const panel = $('#adminPanel');
+    if (!panel) return;
+    panel.style.display = 'block';
+    panel.innerHTML = `
+    <b>公会管理</b>
+    <div id="adminGuildList" style="max-height:300px;overflow-y:auto;"></div>
+    <hr>➕创建公会
+    <input class="input-field" id="newName" placeholder="名称">
+    <input class="input-field" id="newAvatar" placeholder="头像链接">
+    <input class="input-field" id="newHistory" placeholder="简介">
+    <button class="btn btn-primary" onclick="adminCreateGuild()">创建</button>
+    <hr>💎加钻石
+    <input class="input-field" id="addPoints" value="1000" type="number">
+    <button class="btn btn-gold" onclick="adminAddPoints()">添加</button>
+    <hr><button class="btn btn-outline" onclick="exportData()">导出数据</button>`;
+    renderAdminGuildList();
+}
 
-            function renderAdminGuildList() {
-                const el = $('#adminGuildList');
-                if (!el) return;
-                el.innerHTML = appData.guilds.map(g => `
-                <div style="display:flex;gap:8px;padding:6px;background:rgba(255,255,255,0.03);margin-bottom:4px;">
-                    <span style="flex:1;">${g.name}</span><span>票:${g.votes} 人气:${g.popularity}</span>
-                    <button onclick="adminEditGuild('${g.id}')">✏️</button>
-                    <button onclick="adminDeleteGuild('${g.id}')" style="color:#f55;">🗑️</button>
-                </div>`).join('');
-            }
+function renderAdminGuildList() {
+    const el = $('#adminGuildList');
+    if (!el) return;
+    el.innerHTML = appData.guilds.map(g => `
+    <div style="display:flex;gap:8px;padding:6px;background:rgba(255,255,255,0.03);margin-bottom:4px;">
+        <span style="flex:1;">${g.name}</span><span>票:${g.votes} 人气:${g.popularity}</span>
+        <button onclick="adminEditGuild('${g.id}')">✏️</button>
+        <button onclick="adminDeleteGuild('${g.id}')" style="color:#f55;">🗑️</button>
+    </div>`).join('');
+}
 
-            window.adminEditGuild = function(id) {
-                const g = appData.guilds.find(gg => gg.id === id);
-                if (!g) return;
-                const name = prompt('名称', g.name); if (name) g.name = name;
-                const av = prompt('头像链接', g.avatar); if (av !== null) g.avatar = av || DEFAULT_AVATAR;
-                const hist = prompt('历史', g.history); if (hist !== null) g.history = hist || '暂无历史。';
-                saveData(appData); refreshAllUI(); renderAdminPanel();
-            };
+window.adminEditGuild = function(id) {
+    const g = appData.guilds.find(gg => gg.id === id);
+    if (!g) return;
+    const name = prompt('名称', g.name); if (name) g.name = name;
+    const av = prompt('头像链接', g.avatar); if (av !== null) g.avatar = av || DEFAULT_AVATAR;
+    const hist = prompt('历史', g.history); if (hist !== null) g.history = hist || '暂无历史。';
+    saveData(appData); refreshAllUI(); renderAdminPanel();
+};
 
-            window.adminDeleteGuild = function(id) {
-                if (appData.guilds.length <= 2) { showToast('至少保留2个公会'); return; }
-                showModal('确认删除', '确定删除该公会？', [
-                    { text: '取消', cls: 'btn-outline', callback: () => {} },
-                    { text: '删除', cls: 'btn-outline', callback: () => {
-                        appData.guilds = appData.guilds.filter(g => g.id !== id);
-                        if (selectedGuildId === id) selectedGuildId = null;
-                        saveData(appData); refreshAllUI(); renderAdminPanel();
-                    }}
-                ]);
-            };
+window.adminDeleteGuild = function(id) {
+    if (appData.guilds.length <= 2) { showToast('至少保留2个公会'); return; }
+    showModal('确认删除', '确定删除该公会？', [
+        { text: '取消', cls: 'btn-outline', callback: () => {} },
+        { text: '删除', cls: 'btn-outline', callback: () => {
+            appData.guilds = appData.guilds.filter(g => g.id !== id);
+            if (selectedGuildId === id) selectedGuildId = null;
+            saveData(appData); refreshAllUI(); renderAdminPanel();
+        }}
+    ]);
+};
 
-            window.adminCreateGuild = function() {
-                const name = $('#newName')?.value.trim(); if (!name) { showToast('输入名称'); return; }
-                const av = $('#newAvatar')?.value.trim() || DEFAULT_AVATAR;
-                const hist = $('#newHistory')?.value.trim() || '新公会，未来可期。';
-                appData.guilds.push({ id: 'g' + Date.now(), name, avatar: av, votes: 0, popularity: 0, history: hist });
-                saveData(appData); refreshAllUI(); renderAdminPanel(); showToast('创建成功');
-            };
+window.adminCreateGuild = function() {
+    const name = $('#newName')?.value.trim(); if (!name) { showToast('输入名称'); return; }
+    const av = $('#newAvatar')?.value.trim() || DEFAULT_AVATAR;
+    const hist = $('#newHistory')?.value.trim() || '新公会，未来可期。';
+    appData.guilds.push({ id: 'g' + Date.now(), name, avatar: av, votes: 0, popularity: 0, history: hist });
+    saveData(appData); refreshAllUI(); renderAdminPanel(); showToast('创建成功');
+};
 
-            window.adminAddPoints = function() {
-                const amt = parseInt($('#addPoints')?.value) || 0;
-                if (amt <= 0) return;
-                appData.userPoints += amt; saveData(appData); updatePointDisplay(true);
-                showToast(`已添加${amt}钻石`); renderAdminPanel();
-            };
+window.adminAddPoints = function() {
+    const amt = parseInt($('#addPoints')?.value) || 0;
+    if (amt <= 0) return;
+    appData.userPoints += amt;
+    updatePointDisplay(true);
+    showToast(`已添加${amt}钻石`); renderAdminPanel();
+};
 
-            window.exportData = function() {
-                const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
-                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'fhq_backup.json'; a.click();
-            };
+window.exportData = function() {
+    const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'fhq_backup.json'; a.click();
+};
 
-            navTabs.addEventListener('click', e => {
-                const tab = e.target.closest('.nav-tab'); if (!tab) return;
-                navTabs.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-                const page = document.getElementById(tab.dataset.page);
-                if (page) page.classList.add('active');
-                if (tab.dataset.page === 'rankPage') renderRankPage();
-            });
+navTabs.addEventListener('click', e => {
+    const tab = e.target.closest('.nav-tab'); if (!tab) return;
+    navTabs.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const page = document.getElementById(tab.dataset.page);
+    if (page) page.classList.add('active');
+    if (tab.dataset.page === 'rankPage') renderRankPage();
+});
 
 function init() {
+    if (localStorage.getItem('fhq_admin_logged_in') === 'true') {
+        adminLoggedIn = true;
+    }
     appData.guilds.forEach(g => {
         if (!g.avatar) g.avatar = DEFAULT_AVATAR;
         if (!g.history) g.history = '暂无历史记录。';
@@ -1487,6 +1533,21 @@ function init() {
     window.clampVoteAmount = clampVoteAmount;
     loadData();
 }
+
+window.adminLogout = function() {
+    adminLoggedIn = false;
+    localStorage.removeItem('fhq_admin_logged_in');
+    updateRemainVotes();
+    $('#adminPanel').style.display = 'none';
+    var pwdInput = document.getElementById('adminPwd');
+    var loginBtn = document.querySelector('#adminPage .btn-outline');
+    if (pwdInput) pwdInput.style.display = 'block';
+    if (loginBtn) loginBtn.style.display = 'block';
+    var adminInfoEl = document.getElementById('adminInfo');
+    if (adminInfoEl) adminInfoEl.style.display = 'none';
+    showToast('已退出管理员');
+};
+
 init();
 console.log('🚀 封号圈完整版已启动 | 管理密码：雾化牛逼');
         })();
