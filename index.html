@@ -1804,19 +1804,10 @@ window.adminRevoke = function(){
         adminLevel = 'admin';
         localStorage.removeItem('fhq_admin_logged_in');
         updateRemainVotes();
-        showModal('权限已撤销', '你的管理员权限已被撤销，请点击下方按钮退出登录', [
-            { text: '退出登录', cls: 'btn-outline', callback: function() {
-                $('#adminPanel').hide();
-                document.getElementById('adminPwd').style.display = 'block';
-                var loginBtn = document.querySelector('#adminPage .btn-outline');
-                if(loginBtn) loginBtn.style.display = 'block';
-                var adminInfoEl = document.getElementById('adminInfo');
-                if(adminInfoEl) adminInfoEl.remove();
-                var contactBtn = document.getElementById('contactAdminBtn');
-                if(contactBtn) contactBtn.style.display = 'block';
-                closeModal();
-            }}
-        ]);
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = '<div style="background:#16161e;border-radius:18px;padding:24px;max-width:400px;width:90%;text-align:center;border:1px solid #FFB800;box-shadow:0 0 40px rgba(255,184,0,0.3);"><div style="font-size:1.5rem;margin-bottom:12px;">⚠️ 权限已撤销</div><div style="color:#fff;font-size:1rem;margin-bottom:12px;">你的管理员权限已被撤销</div><button onclick="this.parentElement.parentElement.remove();document.getElementById(\'adminPanel\').style.display=\'none\';document.getElementById(\'adminPwd\').style.display=\'block\';document.querySelector(\'#adminPage .btn-outline\').style.display=\'block\';var a=document.getElementById(\'adminInfo\');if(a)a.remove();var c=document.getElementById(\'contactAdminBtn\');if(c)c.style.display=\'block\';" style="padding:10px 30px;background:#FFB800;border:none;border-radius:20px;color:#000;font-weight:700;font-size:1rem;">退出登录</button></div>';
+        document.body.appendChild(overlay);
     } else {
         showToast('权限已撤销');
     }
