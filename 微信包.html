@@ -906,6 +906,16 @@
     </style>
 </head>
 <body>
+<div id="registerOverlay" style="position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;">
+    <div style="background:#16161e;border-radius:18px;padding:30px 24px;text-align:center;max-width:400px;width:90%;border:1px solid rgba(123,47,247,0.4);box-shadow:0 0 40px rgba(123,47,247,0.2);">
+        <div style="font-size:3rem;margin-bottom:12px;">🆔</div>
+        <div style="font-weight:700;font-size:1.2rem;color:#fff;margin-bottom:8px;">您好</div>
+        <div style="color:#a0a0b8;font-size:0.85rem;margin-bottom:20px;">请输入一个纯数字ID进行注册</div>
+        <input type="number" id="registerIdInput" placeholder="例如：123456" style="width:100%;padding:12px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;font-size:1rem;text-align:center;margin-bottom:16px;" oninput="if(this.value.length>10)this.value=this.value.slice(0,10)">
+        <button onclick="registerUser()" style="width:100%;padding:12px;background:linear-gradient(135deg,#7B2FF7,#00E0FF);border:none;border-radius:40px;color:#fff;font-weight:700;font-size:1rem;cursor:pointer;">注册 / 登录</button>
+        <div id="registerError" style="color:#f55;font-size:0.8rem;margin-top:10px;display:none;"></div>
+    </div>
+</div>
     <div class="app-container" id="appContainer">
         <div class="top-bar">
             <div class="logo-area"><span class="logo-dot"></span>封号圈</div>
@@ -961,9 +971,48 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 </script>
 <script>
-        (function() {            
-            const DEFAULT_AVATAR = 'https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAET8eRp_B6XwWRJlAfp00EYyC7kG8X0OQACaiYAAsfO4Vegas-RHCjA_jsE.jpg';
-            const DEFAULT_GUILDS = [
+(function() {
+    // 用户ID
+    let userId = localStorage.getItem('fhq_user_id');
+    if (userId) {
+        document.getElementById('registerOverlay').style.display = 'none';
+    }
+
+    // 注册函数
+    window.registerUser = function() {
+        var idInput = document.getElementById('registerIdInput');
+        var errorDiv = document.getElementById('registerError');
+        var inputId = idInput.value.trim();
+        
+        if (!inputId || isNaN(inputId) || inputId.length < 1) {
+            errorDiv.textContent = '请输入有效的数字ID';
+            errorDiv.style.display = 'block';
+            return;
+        }
+        
+        db.ref('registered_ids/' + inputId).once('value', function(snapshot) {
+            if (snapshot.exists()) {
+                errorDiv.textContent = '该ID已被注册，请更换其他数字';
+                errorDiv.style.display = 'block';
+            } else {
+                userId = inputId;
+                localStorage.setItem('fhq_user_id', userId);
+                db.ref('registered_ids/' + userId).set(true);
+                db.ref('users/' + userId).set({
+                    userPoints: 500,
+                    signedToday: false,
+                    todayVotesUsed: 0,
+                    todayDate: new Date().toDateString()
+                });
+                document.getElementById('registerOverlay').style.display = 'none';
+                showToast('注册成功！初始钻石 500', '🎉');
+                loadUserData();
+            }
+        });
+    };
+    
+    const DEFAULT_AVATAR = 'https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAET8eRp_B6XwWRJlAfp00EYyC7kG8X0OQACaiYAAsfO4Vegas-RHCjA_jsE.jpg';
+    const DEFAULT_GUILDS = [
                 { id: 'g1', name: '天堂', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '天堂公会成立于2024年，以秩序和守护为核心理念。' },
                 { id: 'g2', name: '罪恶', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '罪恶公会诞生于混沌之中，行事不羁但坚守正义。' },
                 { id: 'g3', name: '深海', avatar: DEFAULT_AVATAR, votes: 0, popularity: 0, history: '深海公会如海洋般深邃，擅长隐秘行动。' },
@@ -985,38 +1034,65 @@ const db = firebase.database();
                 };
             }
 
-            function loadData() {
-    db.ref('voteData').on('value', (snapshot) => {
-        const data = snapshot.val();
+            function loadUserData() {
+    if (!userId) return;
+    db.ref('users/' + userId).on('value', function(snapshot) {
+        var data = snapshot.val();
         if (data) {
-            appData = data;
-            const today = new Date().toDateString();
+            appData.userPoints = data.userPoints;
+            appData.signedToday = data.signedToday;
+            appData.todayVotesUsed = data.todayVotesUsed;
+            appData.todayDate = data.todayDate;
+            var today = new Date().toDateString();
             if (appData.todayDate !== today) {
                 appData.todayVotesUsed = 0;
                 appData.todayDate = today;
                 appData.signedToday = false;
+                saveUserData();
             }
-            if (!appData.guilds || appData.guilds.length === 0) {
-                appData.guilds = JSON.parse(JSON.stringify(DEFAULT_GUILDS));
+        }
+        updatePointDisplay();
+        updateRemainVotes();
+    });
+}
+
+function saveUserData() {
+    if (!userId) return;
+    db.ref('users/' + userId).set({
+        userPoints: appData.userPoints,
+        signedToday: appData.signedToday,
+        todayVotesUsed: appData.todayVotesUsed,
+        todayDate: appData.todayDate
+    });
+}
+
+function loadData() {
+    db.ref('voteData').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data && data.guilds) {
+            appData.guilds = data.guilds;
+            const today = new Date().toDateString();
+            if (!appData.todayDate || appData.todayDate !== today) {
+                appData.todayVotesUsed = 0;
+                appData.todayDate = today;
+                appData.signedToday = false;
             }
             appData.guilds.forEach(g => {
                 g.svipLevel = calcSvipLevel(g.popularity || 0);
                 if (!g.history) g.history = '暂无历史。';
             });
-            refreshAllUI();
         } else {
-            const defaultData = getDefaultData();
-            db.ref('voteData').set(defaultData);
-            appData = defaultData;
-            refreshAllUI();
+            appData.guilds = JSON.parse(JSON.stringify(DEFAULT_GUILDS));
+            db.ref('voteData').set({ guilds: appData.guilds, todayDate: new Date().toDateString() });
         }
+        refreshAllUI();
     });
 }
-
-            function saveData(data) {
-    const dataToSave = JSON.parse(JSON.stringify(data));
-    dataToSave.guilds.forEach(g => delete g.svipLevel);
-    db.ref('voteData').set(dataToSave);
+function saveData(data) {
+    const guildsOnly = JSON.parse(JSON.stringify(data.guilds));
+    guildsOnly.forEach(g => delete g.svipLevel);
+    db.ref('voteData').set({ guilds: guildsOnly, todayDate: data.todayDate || new Date().toDateString() });
+    saveUserData();
 }
 
             function calcSvipLevel(p) {
@@ -1532,6 +1608,7 @@ function init() {
     window.selectGuild = selectGuild;
     window.clampVoteAmount = clampVoteAmount;
     loadData();
+loadUserData(); 
 }
 
 window.adminLogout = function() {
