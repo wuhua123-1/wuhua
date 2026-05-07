@@ -1846,6 +1846,20 @@ db.ref('announce').on('value', function(snap) {
         document.body.appendChild(overlay);
     }
 });
+
+db.ref('admins/' + userId).on('value', function(snap){
+    if(!snap.exists() && adminLoggedIn){
+        adminLoggedIn = false;
+        adminLevel = 'admin';
+        localStorage.removeItem('fhq_admin_logged_in');
+        updateRemainVotes();
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = '<div style="background:#16161e;border-radius:18px;padding:24px;max-width:400px;width:90%;text-align:center;border:1px solid #FFB800;box-shadow:0 0 40px rgba(255,184,0,0.3);"><div style="font-size:1.5rem;margin-bottom:12px;">⚠️ 权限已撤销</div><div style="color:#fff;font-size:1rem;margin-bottom:12px;">你的管理员权限已被撤销</div><button onclick="this.parentElement.parentElement.remove();document.getElementById(\'adminPanel\').style.display=\'none\';document.getElementById(\'adminPwd\').style.display=\'block\';document.querySelector(\'#adminPage .btn-outline\').style.display=\'block\';var a=document.getElementById(\'adminInfo\');if(a)a.remove();var c=document.getElementById(\'contactAdminBtn\');if(c)c.style.display=\'block\';" style="padding:10px 30px;background:#FFB800;border:none;border-radius:20px;color:#000;font-weight:700;font-size:1rem;">退出登录</button></div>';
+        document.body.appendChild(overlay);
+    }
+});
+
 function loadUserChat() {
     db.ref('admin_chat/admin').on('value', function(snapshot) {
         var messages = snapshot.val() || {};
