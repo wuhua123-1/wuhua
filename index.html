@@ -2439,24 +2439,44 @@ function completeAtMention(input, uid, suggestions) {
     input.focus();
 }
 
-// ========== 灵动岛 ==========
+var activeIsland = null;
+
 function showDynamicIsland(text, onClick) {
+    if (activeIsland) {
+        activeIsland.classList.add('removing');
+        setTimeout(function() { if (activeIsland) activeIsland.remove(); }, 400);
+    }
     var island = document.createElement('div');
     island.className = 'dynamic-island';
     island.innerHTML = '🔔 ' + text;
     island.addEventListener('click', function() {
         if (onClick) onClick();
-        island.classList.add('removing');
-        setTimeout(function() { island.remove(); }, 400);
+        removeIsland(island);
     });
     document.body.appendChild(island);
+    activeIsland = island;
     setTimeout(function() {
         if (island.parentNode && !island.classList.contains('removing')) {
-            island.classList.add('removing');
-            setTimeout(function() { island.remove(); }, 400);
+            removeIsland(island);
         }
     }, 5000);
 }
+
+function removeIsland(island) {
+    if (!island || island.classList.contains('removing')) return;
+    island.classList.add('removing');
+    if (activeIsland === island) activeIsland = null;
+    setTimeout(function() { if (island.parentNode) island.remove(); }, 400);
+}
+
+// 监听：用户打开群聊时自动关闭灵动岛
+var _origShowGroupChatUI = showGroupChatUI;
+showGroupChatUI = function() {
+    if (activeIsland) {
+        removeIsland(activeIsland);
+    }
+    _origShowGroupChatUI();
+};
 
 var alertedMessages = {};
 function listenForAtMentions() {
