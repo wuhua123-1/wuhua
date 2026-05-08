@@ -2564,107 +2564,7 @@ if (!userId) return;
     });
 }
 
-// ========== 红包系统 ==========
-var redPacketAmounts = [0.88, 1, 1.88, 1.88, 1.88, 1.88, 2.88, 2.88, 2.88, 8.88];
-redPacketAmounts.sort(function() { return Math.random() - 0.5; });  // ← 加这一行
-var totalRedPackets = 10;
-var winnerData = JSON.parse(localStorage.getItem('fhq_red_winners') || '{}');
 
-window.openRedPacketPage = function() {
-    var today = new Date().toDateString();
-    var myKey = userId + '_' + today;
-    if (winnerData[myKey]) {
-        showToast('你今天已经抢过红包了');
-        return;
-    }
-    
-    var grabbed = Object.keys(winnerData).filter(function(k) { return k.endsWith('_' + today); }).length;
-    if (grabbed >= totalRedPackets) {
-        showToast('今天的红包已被抢完，明天再来吧');
-        return;
-    }
-    
-    var overlay = document.createElement('div');
-    overlay.className = 'red-packet-page';
-    overlay.id = 'redPacketOverlay';
-    
-    var closeBtn = document.createElement('button');
-    closeBtn.className = 'rp-close-btn';
-    closeBtn.textContent = '✕';
-    closeBtn.onclick = function() { overlay.remove(); };
-    overlay.appendChild(closeBtn);
-    
-    for (var i = 0; i < totalRedPackets; i++) {
-        (function(index) {
-            var item = document.createElement('div');
-            item.className = 'red-packet-item';
-            
-            var today2 = new Date().toDateString();
-            var isAllGrabbed = Object.keys(winnerData).filter(function(k) { return k.endsWith('_' + today2); }).length >= totalRedPackets;
-            var amount = redPacketAmounts[index];
-            var icon = document.createElement('span');
-            icon.className = 'rp-icon';
-            icon.textContent = '';
-            
-            var label = document.createElement('span');
-            label.className = 'rp-label';
-            label.textContent = '';
-item.dataset.amount = amount;
-            
-            item.appendChild(icon);
-            item.appendChild(label);
-            
-            if (isAllGrabbed) {
-                item.classList.add('grabbed');
-            }
-            
-            item.addEventListener('click', function() {
-                if (item.classList.contains('grabbed')) {
-                    showToast('该红包已被抢完');
-                    return;
-                }
-                var today3 = new Date().toDateString();
-                var myKey3 = userId + '_' + today3;
-                if (winnerData[myKey3]) return;
-                
-                var grabbedNow = Object.keys(winnerData).filter(function(k) { return k.endsWith('_' + today3); }).length;
-                if (grabbedNow >= totalRedPackets) {
-                    showToast('该红包已被抢完');
-                    return;
-                }
-                
-                var actualAmount = parseFloat(item.dataset.amount);
-                winnerData[myKey3] = { amount: actualAmount, settled: false, time: Date.now() };
-                localStorage.setItem('fhq_red_winners', JSON.stringify(winnerData));
-                
-                item.classList.add('grabbed');
-                overlay.remove();
-                
-                spawnFX('🧧', 10, 0.5, 0.3);
-                
-                showModal('🧧 恭喜中奖！', 
-                    '用户 <b style="color:#FFB800;">🆔' + userId + '</b><br>抢到了 <b style="color:#FFB800;font-size:1.5rem;">' + actualAmount.toFixed(2) + ' 元</b> 红包',
-                    [{ text: '知道了', cls: 'btn-gold', callback: function() {} }]
-                );
-                
-                showDynamicIsland('🧧 请尽快前往群聊 @管理员 结账', function() {
-                    document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active');});
-                    document.querySelector('[data-page="adminPage"]').classList.add('active');
-                    document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
-                    document.getElementById('adminPage').classList.add('active');
-                    showGroupChatUI();
-                });
-            });
-            
-            overlay.appendChild(item);
-        })(i);
-    }
-    
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', function(e) {
-        if (e.target === overlay) overlay.remove();
-    });
-};
 
 // 每天0点清空红包数据
 function resetDailyRedPackets() {
@@ -2996,9 +2896,18 @@ window.adminSetGrabLimit = function() {
     if (!redPacketConfig.grabLimits) redPacketConfig.grabLimits = {};
     redPacketConfig.grabLimits[uid] = count;
     saveRedPacketConfig();
-    showToast('已设置 🆔' + uid + ' 可抢' + count + '次');
-    adminShowRedPacketTab();
-};
+    // 清除该用户今天的抢红包记录
+var winnerData = JSON.parse(localStorage.getItem('fhq_red_winners') || '{}');
+var today = new Date().toDateString();
+Object.keys(winnerData).forEach(function(k) {
+    if (k.startsWith(uid + '_') && k.endsWith('_' + today)) {
+        delete winnerData[k];
+    }
+});
+localStorage.setItem('fhq_red_winners', JSON.stringify(winnerData));
+showToast('已设置 🆔' + uid + ' 可抢' + count + '次(已重置今日记录)');
+adminShowRedPacketTab();
+}
 
 window.adminRemoveGrabLimit = function(uid) {
     if (!redPacketConfig.grabLimits) return;
@@ -3040,10 +2949,7 @@ window.openRedPacketPage = function() {
     
     var myKey = userId + '_' + today;
     
-    if (winnerData[myKey]) {
-        showToast('你今天已经抢过红包了');
-        return;
-    }
+    
     
     var grabbed = Object.keys(winnerData).filter(function(k) { return k.endsWith('_' + today); }).length;
     if (grabbed >= totalRedPackets) {
@@ -3073,7 +2979,7 @@ window.openRedPacketPage = function() {
             icon.textContent = '';
             var label = document.createElement('span');
             label.className = 'rp-label';
-            label.textContent = '';
+            label.textContent = '🧧';
             item.dataset.amount = amount;
             item.appendChild(icon);
             item.appendChild(label);
