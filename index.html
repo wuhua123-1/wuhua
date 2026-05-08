@@ -1727,7 +1727,10 @@ if (tab === 'guild') {
     content.innerHTML = '<b>授予/管理权限</b><input class="input-field" id="grantUserId" placeholder="输入用户🆔"><select id="grantLevel" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;margin-bottom:8px;"><option value="admin">普通管理员</option><option value="super_admin">高级管理员</option></select><button class="btn btn-primary" onclick="adminGrant()" style="width:100%;margin-bottom:8px;">✅ 授予权限</button><button class="btn btn-outline" onclick="adminRevoke()" style="width:100%;color:#f55;border-color:#f55;">🗑️ 撤销管理员</button><hr><b>已有管理员列表</b><div id="adminList"></div>';
     renderAdminList();
 } else if (tab === 'announce') {
-    content.innerHTML = '<b>发布公告</b><textarea id="announceText" style="width:100%;height:80px;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;font-size:0.9rem;margin-bottom:8px;resize:vertical;" placeholder="输入公告内容..."></textarea><input type="file" id="announceFile" accept="image/*,video/*" style="display:block;margin-bottom:8px;color:#fff;padding:8px;"><button class="btn btn-gold" onclick="adminSendAnnounce()" style="width:100%;margin-bottom:8px;">📢 发送公告</button><button class="btn btn-outline" onclick="adminClearAnnounce()" style="width:100%;color:#f55;border-color:#f55;">🗑️ 删除公告</button>';
+    content.innerHTML = '<b>发布公告</b><select id="announceType" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;margin-bottom:8px;"><option value="popup">📢 悬浮窗公告</option><option value="broadcast">📣 播报公告</option></select><textarea id="announceText" style="width:100%;height:80px;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;font-size:0.9rem;margin-bottom:8px;resize:vertical;" placeholder="输入公告内容..."></textarea><div id="announceFileArea"><input type="file" id="announceFile" accept="image/*,video/*" style="display:block;margin-bottom:8px;color:#fff;padding:8px;"></div><button class="btn btn-gold" onclick="adminSendAnnounce()" style="width:100%;margin-bottom:8px;">📢 发送公告</button><button class="btn btn-outline" onclick="adminClearAnnounce()" style="width:100%;color:#f55;border-color:#f55;">🗑️ 删除公告</button>';
+    document.getElementById('announceType').addEventListener('change', function(){
+        document.getElementById('announceFileArea').style.display = this.value === 'broadcast' ? 'none' : 'block';
+    });
 }
 }
 function loadAdminChat() {
@@ -1766,22 +1769,28 @@ window.adminSendImg = function(fileInput) {
     reader.readAsDataURL(file);
 };
 window.adminSendAnnounce = function() {
+    var type = document.getElementById('announceType').value;
     var text = document.getElementById('announceText').value.trim();
-    var fileInput = document.getElementById('announceFile');
-    if (!text && !fileInput.files[0]) { showToast('请输入内容或选择文件'); return; }
-    var announceData = { text: text, time: Date.now(), type: 'text' };
-    if (fileInput.files[0]) {
-        var reader = new FileReader();
-        reader.onload = function(e) {
-            announceData.file = e.target.result;
-            announceData.fileType = fileInput.files[0].type.startsWith('image') ? 'image' : 'video';
+    if(!text) { showToast('请输入内容'); return; }
+    if(type === 'broadcast'){
+        db.ref('broadcast').set({ text: '📣全服通告:'+text, time: Date.now() });
+        showToast('播报公告已发送');
+    } else {
+        var fileInput = document.getElementById('announceFile');
+        var announceData = { text: text, time: Date.now(), type: 'text' };
+        if(fileInput.files[0]){
+            var reader = new FileReader();
+            reader.onload = function(e){
+                announceData.file = e.target.result;
+                announceData.fileType = fileInput.files[0].type.startsWith('image')?'image':'video';
+                db.ref('announce').set(announceData);
+                showToast('公告已发送');
+            };
+            reader.readAsDataURL(fileInput.files[0]);
+        } else {
             db.ref('announce').set(announceData);
             showToast('公告已发送');
-        };
-        reader.readAsDataURL(fileInput.files[0]);
-    } else {
-        db.ref('announce').set(announceData);
-        showToast('公告已发送');
+        }
     }
 };
 
@@ -1848,7 +1857,7 @@ db.ref('announce').on('value', function(snap) {
 });
 
 db.ref('admins/' + userId).on('value', function(snap){
-    if(!snap.exists() && adminLoggedIn){
+    if(!snap.exists() && adminLoggedIn && adminLevel !== 'super_admin'){
         adminLoggedIn = false;
         adminLevel = 'admin';
         localStorage.removeItem('fhq_admin_logged_in');
