@@ -2374,6 +2374,7 @@ function loadGroupChat() {
             container.appendChild(div);
         });
         container.scrollTop = container.scrollHeight;
+        setTimeout(function() { enhanceGroupChatWithRedBadge(); }, 300);
     });
 }
 
@@ -2603,11 +2604,11 @@ window.openRedPacketPage = function() {
             var amount = redPacketAmounts[index];
             var icon = document.createElement('span');
             icon.className = 'rp-icon';
-            icon.textContent = '🧧';
+            icon.textContent = '';
             
             var label = document.createElement('span');
             label.className = 'rp-label';
-            label.textContent = '🧧';
+            label.textContent = '';
 item.dataset.amount = amount;
             
             item.appendChild(icon);
@@ -2764,7 +2765,8 @@ var redPacketConfig = {
     amounts: [0.88, 1, 1.88, 1.88, 1.88, 1.88, 2.88, 2.88, 2.88, 8.88],
     totalCount: 10,
     bannedUsers: [],
-    scheduled: null
+    scheduled: null,
+    grabLimits: {}  // { "用户ID": 允许次数 }
 };
 
 function loadRedPacketConfig() {
@@ -2798,9 +2800,13 @@ window.adminShowRedPacketTab = function() {
     var statusHTML = '<div class="section-title">🧧 红包实时状态（今日）</div>';
     statusHTML += '<div class="rp-status-grid">';
     for (var i = 0; i < redPacketConfig.totalCount; i++) {
-        var winnerKeys = Object.keys(allWinners).filter(function(k) { return k.endsWith('_' + today); }).sort(function(a,b) { return allWinners[a].time - allWinners[b].time; });
-        var winner = winnerKeys[i] ? allWinners[winnerKeys[i]] : null;
-        var uid = winner ? winnerKeys[i].split('_')[0] : null;
+        var todayWinners = {};
+Object.keys(allWinners).forEach(function(k) {
+    if (k.endsWith('_' + today)) todayWinners[k] = allWinners[k];
+});
+var sortedKeys = Object.keys(todayWinners).sort(function(a,b) { return todayWinners[a].time - todayWinners[b].time; });
+var winner = sortedKeys[i] ? todayWinners[sortedKeys[i]] : null;
+var uid = winner ? sortedKeys[i].split('_')[0] : null;
         var amount = redPacketConfig.amounts[i] || 0;
         
         statusHTML += '<div class="rp-status-item ' + (winner ? 'grabbed' : 'unclaimed') + '">';
@@ -2837,6 +2843,18 @@ window.adminShowRedPacketTab = function() {
         statusHTML += '<span class="banned-user-tag">🆔' + uid + ' <button onclick="adminUnbanUser(\'' + uid + '\')">✕</button></span>';
     });
     statusHTML += '</div>';
+    statusHTML += '<div class="section-title" style="margin-top:12px;">🔢 用户抢红包次数</div>';
+statusHTML += '<div class="admin-input-row">';
+statusHTML += '<input type="text" id="rpLimitUserId" placeholder="输入用户🆔">';
+statusHTML += '<input type="number" id="rpLimitCount" value="1" min="0" max="99" placeholder="次数(0=禁止)">';
+statusHTML += '<button class="btn-sm btn-sm-cyan" onclick="adminSetGrabLimit()">设置</button>';
+statusHTML += '</div>';
+statusHTML += '<div id="rpLimitList" style="margin-top:6px;">';
+var limits = redPacketConfig.grabLimits || {};
+Object.keys(limits).forEach(function(uid) {
+    statusHTML += '<span class="banned-user-tag" style="border-color:rgba(0,224,255,0.4);color:#00E0FF;">🆔' + uid + ' ×' + limits[uid] + '次 <button onclick="adminRemoveGrabLimit(\'' + uid + '\')">✕</button></span>';
+});
+statusHTML += '</div>';
     
     statusHTML += '<div class="section-title" style="margin-top:12px;">⏰ 定时刷新配置</div>';
     statusHTML += '<div class="admin-input-row">';
@@ -2970,6 +2988,26 @@ window.adminCancelSchedule = function() {
     adminShowRedPacketTab();
 };
 
+window.adminSetGrabLimit = function() {
+    var uid = document.getElementById('rpLimitUserId').value.trim();
+    var count = parseInt(document.getElementById('rpLimitCount').value);
+    if (!uid) { showToast('请输入用户ID'); return; }
+    if (isNaN(count) || count < 0) count = 0;
+    if (!redPacketConfig.grabLimits) redPacketConfig.grabLimits = {};
+    redPacketConfig.grabLimits[uid] = count;
+    saveRedPacketConfig();
+    showToast('已设置 🆔' + uid + ' 可抢' + count + '次');
+    adminShowRedPacketTab();
+};
+
+window.adminRemoveGrabLimit = function(uid) {
+    if (!redPacketConfig.grabLimits) return;
+    delete redPacketConfig.grabLimits[uid];
+    saveRedPacketConfig();
+    showToast('已移除 🆔' + uid + ' 的次数限制');
+    adminShowRedPacketTab();
+};
+
 // 修改抢红包函数，使用服务器配置并检查禁止名单
 var _origOpenRedPacketPage = window.openRedPacketPage;
 window.openRedPacketPage = function() {
@@ -2978,13 +3016,29 @@ window.openRedPacketPage = function() {
         return;
     }
     
+    // 检查次数限制
+    var today = new Date().toDateString();
+    var winnerData = JSON.parse(localStorage.getItem('fhq_red_winners') || '{}');
+    if (redPacketConfig.grabLimits && redPacketConfig.grabLimits.hasOwnProperty(userId)) {
+        var maxGrab = redPacketConfig.grabLimits[userId];
+        if (maxGrab <= 0) {
+            showToast('🚫 你已被限制抢红包');
+            return;
+        }
+        var todayGrabbedCount = Object.keys(winnerData).filter(function(k) {
+            return k.startsWith(userId + '_') && k.endsWith('_' + today);
+        }).length;
+        if (todayGrabbedCount >= maxGrab) {
+            showToast('你今天抢红包次数已用完(' + maxGrab + '次)');
+            return;
+        }
+    }
+    
     var redPacketAmounts = redPacketConfig.amounts.slice();
     redPacketAmounts.sort(function() { return Math.random() - 0.5; });
     var totalRedPackets = redPacketConfig.totalCount;
     
-    var today = new Date().toDateString();
     var myKey = userId + '_' + today;
-    var winnerData = JSON.parse(localStorage.getItem('fhq_red_winners') || '{}');
     
     if (winnerData[myKey]) {
         showToast('你今天已经抢过红包了');
@@ -3016,10 +3070,10 @@ window.openRedPacketPage = function() {
             var amount = redPacketAmounts[index];
             var icon = document.createElement('span');
             icon.className = 'rp-icon';
-            icon.textContent = '🧧';
+            icon.textContent = '';
             var label = document.createElement('span');
             label.className = 'rp-label';
-            label.textContent = '🧧';
+            label.textContent = '';
             item.dataset.amount = amount;
             item.appendChild(icon);
             item.appendChild(label);
