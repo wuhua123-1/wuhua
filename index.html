@@ -936,6 +936,86 @@
     80% { transform: translateX(0); opacity: 1; }
     100% { transform: translateX(120vw); opacity: 0; }
 }
+
+/* ========== 灵动岛提醒 ========== */
+.dynamic-island {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3000;
+    background: #000;
+    border-radius: 24px;
+    padding: 10px 20px;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 0 30px rgba(0,224,255,0.4);
+    animation: islandIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 90vw;
+    white-space: nowrap;
+}
+.dynamic-island.removing {
+    animation: islandOut 0.4s ease-in forwards;
+}
+@keyframes islandIn {
+    from { width: 0; opacity: 0; padding: 10px 0; }
+    to { width: auto; opacity: 1; padding: 10px 20px; }
+}
+@keyframes islandOut {
+    from { opacity: 1; transform: translateX(-50%) scale(1); }
+    to { opacity: 0; transform: translateX(-50%) scale(0.5); }
+}
+
+/* ========== 群聊人数 ========== */
+.group-member-count {
+    font-size: 0.7rem;
+    color: #a0a0b8;
+    margin-left: 6px;
+}
+
+/* ========== @选人列表 ========== */
+.at-suggestion {
+    position: absolute;
+    bottom: 60px;
+    left: 12px;
+    right: 12px;
+    background: #1a1a2e;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    max-height: 180px;
+    overflow-y: auto;
+    z-index: 2500;
+    display: none;
+}
+.at-suggestion .at-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    color: #e8e8f0;
+    font-size: 0.85rem;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.at-suggestion .at-item:hover,
+.at-suggestion .at-item.active {
+    background: rgba(123,47,247,0.3);
+}
+
+/* ========== 中奖用户标识 ========== */
+.winner-badge {
+    font-size: 0.65rem;
+    color: #FFB800;
+    margin-left: 4px;
+    animation: winnerGlow 1.5s ease-in-out infinite;
+}
+@keyframes winnerGlow {
+    0%,100% { text-shadow: 0 0 4px #FFB800; }
+    50% { text-shadow: 0 0 12px #FFB800, 0 0 20px #FFB800; }
+}
+
     </style>
 </head>
 <body>
@@ -1728,9 +1808,23 @@ if (tab === 'guild') {
         renderAdminGuildList();
     } else if (tab === 'diamond') {
         content.innerHTML = '<b>加钻石（自己）</b><input class="input-field" id="addPoints" value="1000" type="number"><button class="btn btn-gold" onclick="adminAddPoints()" style="width:100%;">添加给自己</button><hr><b>指定ID加钻石</b><input class="input-field" id="targetUserId" placeholder="输入用户ID"><input class="input-field" id="targetPoints" value="1000" type="number"><button class="btn btn-gold" onclick="adminAddPointsToUser()" style="width:100%;">添加给指定用户</button>';
-    } else if (tab === 'chat') {
-        content.innerHTML = '<div style="display:flex;flex-direction:column;height:400px;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;"><div id="adminChatMessages" style="flex:1;overflow-y:auto;padding:12px;"></div><div style="display:flex;padding:10px;border-top:1px solid rgba(255,255,255,0.1);"><input type="text" id="adminChatInput" placeholder="输入消息..." style="flex:1;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:20px;color:#fff;font-size:0.85rem;" onkeydown="if(event.key===\'Enter\')adminSendMsg()"><label style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;margin-left:8px;cursor:pointer;font-size:1.2rem;"><input type="file" accept="image/*,video/*" onchange="adminSendImg(this)" style="display:none;">+</label></div></div>';
-    loadAdminChat();
+} else if (tab === 'chat') {
+    var adminCard = document.querySelector('#adminPage .admin-card');
+    if (adminCard) {
+        adminCard.innerHTML = '<div class="card-header"><span>💬 封号圈社区</span><span id="groupOnlineCount" class="group-member-count">0人在线</span></div>' +
+            '<div style="display:flex;flex-direction:column;height:400px;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;">' +
+                '<div id="groupChatMessages" style="flex:1;overflow-y:auto;padding:12px;"></div>' +
+                '<div style="position:relative;display:flex;padding:10px;border-top:1px solid rgba(255,255,255,0.1);">' +
+                    '<input type="text" id="groupChatInput" placeholder="输入消息... @某人" style="flex:1;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:20px;color:#fff;font-size:0.85rem;" onkeydown="if(event.key===\'Enter\')groupSendMsg()">' +
+                    '<label style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;margin-left:8px;cursor:pointer;font-size:1.2rem;"><input type="file" accept="image/*,video/*" onchange="groupSendImg(this)" style="display:none;">+</label>' +
+                '</div>' +
+                '<div class="at-suggestion" id="atSuggestions"></div>' +
+            '</div>';
+        loadGroupChat();
+        updateGroupOnlineCount();
+        setupAtSystem('groupChatInput', 'atSuggestions');
+    }
+    return;
     } else if (tab === 'query') {
     content.innerHTML = '<b>查询与改名</b><input class="input-field" id="queryUserId" placeholder="输入要查询的🆔"><button class="btn btn-primary" onclick="adminQueryUser()" style="width:100%;margin-bottom:8px;">🔍 查询状态</button><div id="queryResult" style="color:#fff;margin-bottom:8px;"></div><hr><b>更改🆔</b><input class="input-field" id="changeOldId" placeholder="输入要更改的🆔"><input class="input-field" id="changeNewId" placeholder="输入新🆔"><button class="btn btn-gold" onclick="adminChangeId()" style="width:100%;">✏️ 更改🆔</button>';
     } else if (tab === 'grant') {
@@ -2113,6 +2207,7 @@ function init() {
     loadData();
 startHeartbeat();
     loadUserData(); 
+    listenForAtMentions();
 }
 
 setTimeout(function(){
@@ -2127,7 +2222,6 @@ setTimeout(function(){
 }, 1500);
 
 // 普通用户显示联系管理员按钮
-// 普通用户显示联系管理员按钮
 if (!adminLoggedIn) {
     var contactBtn = document.createElement('button');
     contactBtn.id = 'contactAdminBtn';
@@ -2138,11 +2232,7 @@ if (!adminLoggedIn) {
         document.querySelector('[data-page="adminPage"]').classList.add('active');
         document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
         document.getElementById('adminPage').classList.add('active');
-        var adminCard = document.querySelector('#adminPage .admin-card');
-        if (adminCard) {
-            adminCard.innerHTML = '<div class="card-header">💬 联系管理员</div><div style="display:flex;flex-direction:column;height:400px;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;"><div id="userChatMessages" style="flex:1;overflow-y:auto;padding:12px;"></div><div style="display:flex;padding:10px;border-top:1px solid rgba(255,255,255,0.1);"><input type="text" id="userChatInput" placeholder="输入消息..." style="flex:1;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:20px;color:#fff;font-size:0.85rem;" onkeydown="if(event.key===\'Enter\')userSendMsg()"><label style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;margin-left:8px;cursor:pointer;font-size:1.2rem;"><input type="file" accept="image/*,video/*" onchange="userSendImg(this)" style="display:none;">+</label></div></div>';
-            loadUserChat();
-        }
+        showGroupChatUI();
     };
     document.body.appendChild(contactBtn);
 }
@@ -2163,6 +2253,170 @@ window.adminLogout = function() {
 };
 
 init();
+
+// ========== 群聊系统 ==========
+function showGroupChatUI() {
+    var adminCard = document.querySelector('#adminPage .admin-card');
+    if (!adminCard) return;
+    adminCard.innerHTML = '<div class="card-header"><span>💬 封号圈社区</span><span id="groupOnlineCount" class="group-member-count">0人在线</span></div>' +
+        '<div style="display:flex;flex-direction:column;height:400px;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;">' +
+            '<div id="groupChatMessages" style="flex:1;overflow-y:auto;padding:12px;"></div>' +
+            '<div style="position:relative;display:flex;padding:10px;border-top:1px solid rgba(255,255,255,0.1);">' +
+                '<input type="text" id="groupChatInput" placeholder="输入消息... @某人" style="flex:1;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:20px;color:#fff;font-size:0.85rem;" onkeydown="if(event.key===\'Enter\')groupSendMsg()">' +
+                '<label style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;margin-left:8px;cursor:pointer;font-size:1.2rem;"><input type="file" accept="image/*,video/*" onchange="groupSendImg(this)" style="display:none;">+</label>' +
+            '</div>' +
+            '<div class="at-suggestion" id="atSuggestions"></div>' +
+        '</div>';
+    loadGroupChat();
+    updateGroupOnlineCount();
+    setupAtSystem('groupChatInput', 'atSuggestions');
+}
+
+function loadGroupChat() {
+    db.ref('public_chat').on('value', function(snapshot) {
+        var messages = snapshot.val() || {};
+        var container = document.getElementById('groupChatMessages');
+        if (!container) return;
+        container.innerHTML = '';
+        var keys = Object.keys(messages).sort(function(a,b){return messages[a].time - messages[b].time;});
+        keys.forEach(function(key){
+            var msg = messages[key];
+            var isMine = msg.from === userId;
+            var isAdminMsg = msg.from === 'admin';
+            var avatarEmoji = isAdminMsg ? '👑' : '🆔';
+            var senderName = isAdminMsg ? '管理员' : ('ID:' + msg.from);
+            var div = document.createElement('div');
+            div.style.cssText = 'display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;' + (isMine ? 'flex-direction:row-reverse;' : '');
+            div.innerHTML = '<div style="width:36px;height:36px;border-radius:50%;background:#2a2a38;display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;">' + avatarEmoji + '</div>' +
+                '<div><div style="font-size:0.7rem;color:#a0a0b8;margin-bottom:2px;">' + senderName + '</div>' +
+                '<div style="background:' + (isAdminMsg ? 'rgba(123,47,247,0.3)' : (isMine ? 'rgba(0,224,255,0.2)' : 'rgba(255,255,255,0.06)')) + ';padding:8px 12px;border-radius:16px;font-size:0.85rem;max-width:200px;word-break:break-word;">' + 
+                    (msg.type === 'image' ? '<img src="' + msg.text + '" style="max-width:150px;border-radius:8px;">' : msg.text) + '</div></div>';
+            container.appendChild(div);
+        });
+        container.scrollTop = container.scrollHeight;
+    });
+}
+
+function updateGroupOnlineCount() {
+    db.ref('registered_ids').on('value', function(snap) {
+        var count = snap.numChildren() || 0;
+        var el = document.getElementById('groupOnlineCount');
+        if (el) el.textContent = count + '人在线';
+    });
+}
+
+window.groupSendMsg = function() {
+    var input = document.getElementById('groupChatInput');
+    if (!input || !userId) return;
+    var text = input.value.trim();
+    if (!text) return;
+    db.ref('public_chat').push({ from: userId, text: text, time: Date.now(), type: 'text' });
+    input.value = '';
+};
+
+window.groupSendImg = function(fileInput) {
+    var file = fileInput.files[0];
+    if (!file || !userId) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        db.ref('public_chat').push({ from: userId, text: e.target.result, time: Date.now(), type: 'image' });
+    };
+    reader.readAsDataURL(file);
+};
+
+// ========== @系统 ==========
+var atSuggestionsVisible = false;
+var atSelectedIndex = -1;
+
+function setupAtSystem(inputId, suggestionsId) {
+    var input = document.getElementById(inputId);
+    var suggestions = document.getElementById(suggestionsId);
+    if (!input || !suggestions) return;
+    input.addEventListener('input', function() {
+        var val = input.value;
+        var lastAt = val.lastIndexOf('@');
+        if (lastAt !== -1 && (lastAt === 0 || val[lastAt - 1] === ' ')) {
+            var query = val.substring(lastAt + 1).toLowerCase();
+            db.ref('registered_ids').once('value', function(snap) {
+                var users = ['admin'];
+                snap.forEach(function(c) { if (c.key !== userId) users.push(c.key); });
+                var filtered = users.filter(function(u) { return u.toLowerCase().indexOf(query) !== -1; });
+                if (filtered.length > 0) {
+                    suggestions.innerHTML = filtered.map(function(u, i) {
+                        return '<div class="at-item' + (i === 0 ? ' active' : '') + '" data-uid="' + u + '">@' + u + '</div>';
+                    }).join('');
+                    suggestions.style.display = 'block';
+                    atSuggestionsVisible = true;
+                    atSelectedIndex = 0;
+                } else { suggestions.style.display = 'none'; atSuggestionsVisible = false; }
+            });
+        } else { suggestions.style.display = 'none'; atSuggestionsVisible = false; }
+    });
+    input.addEventListener('keydown', function(e) {
+        if (!atSuggestionsVisible) return;
+        if (e.key === 'ArrowDown') { e.preventDefault(); atSelectedIndex = Math.min(atSelectedIndex + 1, suggestions.children.length - 1); updateAtSel(suggestions); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); atSelectedIndex = Math.max(atSelectedIndex - 1, 0); updateAtSel(suggestions); }
+        else if (e.key === 'Tab' || e.key === 'Enter') { e.preventDefault();
+            if (atSelectedIndex >= 0 && suggestions.children[atSelectedIndex]) {
+                completeAtMention(input, suggestions.children[atSelectedIndex].dataset.uid, suggestions);
+            }
+        } else if (e.key === 'Escape') { suggestions.style.display = 'none'; atSuggestionsVisible = false; }
+    });
+    suggestions.addEventListener('click', function(e) {
+        var item = e.target.closest('.at-item');
+        if (item) completeAtMention(input, item.dataset.uid, suggestions);
+    });
+}
+
+function updateAtSel(s) {
+    Array.from(s.children).forEach(function(it, i) { it.classList.toggle('active', i === atSelectedIndex); });
+}
+
+function completeAtMention(input, uid, suggestions) {
+    var val = input.value;
+    var lastAt = val.lastIndexOf('@');
+    input.value = val.substring(0, lastAt) + '@' + uid + ' ';
+    suggestions.style.display = 'none';
+    atSuggestionsVisible = false;
+    input.focus();
+}
+
+// ========== 灵动岛 ==========
+function showDynamicIsland(text, onClick) {
+    var island = document.createElement('div');
+    island.className = 'dynamic-island';
+    island.innerHTML = '🔔 ' + text;
+    island.addEventListener('click', function() {
+        if (onClick) onClick();
+        island.classList.add('removing');
+        setTimeout(function() { island.remove(); }, 400);
+    });
+    document.body.appendChild(island);
+    setTimeout(function() {
+        if (island.parentNode && !island.classList.contains('removing')) {
+            island.classList.add('removing');
+            setTimeout(function() { island.remove(); }, 400);
+        }
+    }, 5000);
+}
+
+function listenForAtMentions() {
+    db.ref('public_chat').on('child_added', function(snap) {
+        var msg = snap.val();
+        if (!msg || !userId || msg.from === userId) return;
+        if (msg.text && msg.text.indexOf('@' + userId) !== -1) {
+            var fromName = msg.from === 'admin' ? '管理员' : ('🆔' + msg.from);
+            showDynamicIsland(fromName + ' @了你，请尽快前往群聊', function() {
+                document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active');});
+                document.querySelector('[data-page="adminPage"]').classList.add('active');
+                document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+                document.getElementById('adminPage').classList.add('active');
+                showGroupChatUI();
+            });
+        }
+    });
+}
+
 console.log('🚀 封号圈完整版已启动 | 管理密码：2010421');
         })();
     </script>
