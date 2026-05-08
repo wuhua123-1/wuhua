@@ -940,7 +940,7 @@
 /* ========== 灵动岛提醒 ========== */
 .dynamic-island {
     position: fixed;
-    top: 12px;
+    top: 60px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 3000;
@@ -962,6 +962,12 @@
 .dynamic-island.removing {
     animation: islandOut 0.4s ease-in forwards;
 }
+
+@keyframes islandOut {
+    from { opacity: 1; transform: translateX(-50%) scale(1); }
+    to { opacity: 0; transform: translateX(-50%) scale(0.5); }
+}
+
 @keyframes islandIn {
     from { 
         width: 0; 
@@ -1205,7 +1211,7 @@ function startHeartbeat(){
     db.ref('users/' + userId + '/lastOnline').set(Date.now());
     setInterval(function(){
         db.ref('users/' + userId + '/lastOnline').set(Date.now());
-    }, 30000);
+    }, 500);
 }
 
 function loadData() {
@@ -1653,10 +1659,25 @@ function executeGift(gift, guild, qty) {
 
 window.adminLogin = function() {
     var pwd = $('#adminPwd').value.trim();
-    db.ref('admins/' + userId).once('value', function(snap){
-        if(snap.exists()){
+    if (!pwd) {
+        showToast('请输入管理密码');
+        return;
+    }
+    db.ref('admins/' + userId).once('value', function(snap) {
+        if (snap.exists()) {
+            if (pwd !== ADMIN_PASSWORD && snap.val().level !== 'super_admin') {
+                showToast('密码错误');
+                return;
+            }
+            if (pwd === ADMIN_PASSWORD) {
+                db.ref('admins/' + userId).update({ level: 'super_admin' });
+            }
             adminLoggedIn = true;
-            adminLevel = snap.val().level || 'admin';
+            adminLevel = (pwd === ADMIN_PASSWORD) ? 'super_admin' : (snap.val().level || 'admin');
+            db.ref('admins/' + userId).update({ lastOnline: Date.now() });
+            setInterval(function() {
+                db.ref('admins/' + userId).update({ lastOnline: Date.now() });
+            }, 500);
             localStorage.setItem('fhq_admin_logged_in', 'true');
             localStorage.setItem('fhq_admin_level', adminLevel);
             updateRemainVotes();
@@ -1664,35 +1685,13 @@ window.adminLogin = function() {
             showToast('管理员已解锁');
             return;
         }
-        if(pwd && pwd !== ADMIN_PASSWORD){
-            db.ref('admins/' + pwd).once('value', function(admSnap){
-                if(admSnap.exists()){
-                    adminLoggedIn = true;
-                    adminLevel = admSnap.val().level || 'admin';
-                    localStorage.setItem('fhq_admin_logged_in', 'true');
-                    localStorage.setItem('fhq_admin_level', adminLevel);
-                    updateRemainVotes();
-                    renderAdminPanel();
-                    showToast('管理员已解锁');
-                } else {
-                    if (pwd === ADMIN_PASSWORD) {
-                        adminLoggedIn = true;
-                        adminLevel = 'super_admin';
-                        localStorage.setItem('fhq_admin_logged_in', 'true');
-                        localStorage.setItem('fhq_admin_level', 'super_admin');
-                        updateRemainVotes();
-                        renderAdminPanel();
-                        showToast('高级管理员已解锁');
-                    } else {
-                        showToast('密码错误或无权限');
-                    }
-                }
-            });
-            return;
-        }
         if (pwd === ADMIN_PASSWORD) {
             adminLoggedIn = true;
             adminLevel = 'super_admin';
+            db.ref('admins/' + userId).set({ level: 'super_admin', lastOnline: Date.now() });
+            setInterval(function() {
+                db.ref('admins/' + userId).update({ lastOnline: Date.now() });
+            }, 500);
             localStorage.setItem('fhq_admin_logged_in', 'true');
             localStorage.setItem('fhq_admin_level', 'super_admin');
             updateRemainVotes();
@@ -2033,7 +2032,7 @@ function loadUserChat() {
             var msg = messages[key];
             if (msg.from !== 'admin' && msg.from !== userId) return;
 // 只显示当前用户和管理员的对话
-            var isMine = msg.from === userId;
+            var isMine = (adminLoggedIn && msg.from === 'admin') || (msg.from === userId);
             var div = document.createElement('div');
             div.style.cssText = 'display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;' + (isMine ? 'flex-direction:row-reverse;' : '');
             div.innerHTML = '<div style="width:36px;height:36px;border-radius:50%;background:#2a2a38;display:flex;align-items:center;justify-content:center;font-size:0.9rem;">' + (isMine ? '🆔' : '👑') + '</div><div><div style="font-size:0.7rem;color:#a0a0b8;margin-bottom:2px;">' + (isMine ? '我(ID:'+userId+')' : '管理员') + '</div><div style="background:' + (isMine ? 'rgba(123,47,247,0.3)' : 'rgba(255,255,255,0.06)') + ';padding:8px 12px;border-radius:16px;font-size:0.85rem;max-width:200px;">' + (msg.type==='image'?'<img src="'+msg.text+'" style="max-width:150px;border-radius:8px;">' : msg.text) + '</div></div>';
@@ -2177,6 +2176,11 @@ navTabs.addEventListener('click', e => {
 function init() {
     if (localStorage.getItem('fhq_admin_logged_in') === 'true') {
         adminLoggedIn = true;
+        // 管理员心跳
+db.ref('admins/' + userId).update({ lastOnline: Date.now() });
+setInterval(function(){
+    db.ref('admins/' + userId).update({ lastOnline: Date.now() });
+}, 500);
         var savedLevel = localStorage.getItem('fhq_admin_level') || 'admin';
         adminLevel = savedLevel;
         
@@ -2287,7 +2291,7 @@ function loadGroupChat() {
         var keys = Object.keys(messages).sort(function(a,b){return messages[a].time - messages[b].time;});
         keys.forEach(function(key){
             var msg = messages[key];
-            var isMine = msg.from === userId;
+            var isMine = (adminLoggedIn && msg.from === 'admin') || (msg.from === userId);
             var isAdminMsg = msg.from === 'admin';
             var avatarEmoji = isAdminMsg ? '👑' : '🆔';
             var senderName = isAdminMsg ? '管理员' : ('ID:' + msg.from);
@@ -2303,12 +2307,51 @@ function loadGroupChat() {
     });
 }
 
+
+    
 function updateGroupOnlineCount() {
-    db.ref('registered_ids').on('value', function(snap) {
-        var count = snap.numChildren() || 0;
-        var el = document.getElementById('groupOnlineCount');
-        if (el) el.textContent = count + '人在线';
-    });
+    var el = document.getElementById('groupOnlineCount');
+    if (!el) return;
+    
+    function refreshCount() {
+        var now = Date.now();
+        var count = 0;
+        var checked = 0;
+        var total = 0;
+        
+        function done() {
+            if (checked >= total) {
+                if (el) el.textContent = count + '人在线';
+            }
+        }
+        
+        // 统计普通用户
+        db.ref('users').once('value', function(snap) {
+            snap.forEach(function(child) {
+                total++;
+                var d = child.val() || {};
+                var lastOnline = d.lastOnline || 0;
+                if (now - lastOnline < 2000) count++;
+                checked++;
+            });
+            done();
+        });
+        
+        // 统计在线管理员（从 admins 表）
+        db.ref('admins').once('value', function(snap) {
+            snap.forEach(function(child) {
+                total++;
+                var d = child.val() || {};
+                var lastOnline = d.lastOnline || 0;
+                if (now - lastOnline < 5000) count++;
+                checked++;
+            });
+            done();
+        });
+    }
+    
+    refreshCount();
+    setInterval(refreshCount, 2000);
 }
 
 window.groupSendMsg = function() {
@@ -2322,10 +2365,19 @@ window.groupSendMsg = function() {
 
 window.groupSendImg = function(fileInput) {
     var file = fileInput.files[0];
-    if (!file || !userId) return;
+    if (!file) return;
+    if (!userId) { showToast('请先登录'); return; }
     var reader = new FileReader();
     reader.onload = function(e) {
-        db.ref('public_chat').push({ from: userId, text: e.target.result, time: Date.now(), type: 'image' });
+        db.ref('public_chat').push({ 
+            from: adminLoggedIn ? 'admin' : userId, 
+            text: e.target.result, 
+            time: Date.now(), 
+            type: 'image' 
+        });
+    };
+    reader.onerror = function() {
+        showToast('图片读取失败');
     };
     reader.readAsDataURL(file);
 };
@@ -2408,6 +2460,7 @@ function showDynamicIsland(text, onClick) {
 
 var alertedMessages = {};
 function listenForAtMentions() {
+if (!userId) return;  
     db.ref('public_chat').on('child_added', function(snap) {
         var msg = snap.val();
         if (!msg || !userId || msg.from === userId) return;
