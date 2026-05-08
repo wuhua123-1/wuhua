@@ -1559,34 +1559,33 @@ function executeGift(gift, guild, qty) {
 
 window.adminLogin = function() {
     var pwd = $('#adminPwd').value.trim();
-    // 先检查是否已被授权
     db.ref('admins/' + userId).once('value', function(snap){
         if(snap.exists()){
             adminLoggedIn = true;
             adminLevel = snap.val().level || 'admin';
-if (adminLevel === 'super_admin') adminLevel = 'admin';
             localStorage.setItem('fhq_admin_logged_in', 'true');
+            localStorage.setItem('fhq_admin_level', adminLevel);
             updateRemainVotes();
             renderAdminPanel();
             showToast('管理员已解锁');
             return;
         }
-        // 检查输入的是否为被授权的ID（用ID当密码）
         if(pwd && pwd !== ADMIN_PASSWORD){
             db.ref('admins/' + pwd).once('value', function(admSnap){
                 if(admSnap.exists()){
                     adminLoggedIn = true;
                     adminLevel = admSnap.val().level || 'admin';
                     localStorage.setItem('fhq_admin_logged_in', 'true');
+                    localStorage.setItem('fhq_admin_level', adminLevel);
                     updateRemainVotes();
                     renderAdminPanel();
                     showToast('管理员已解锁');
                 } else {
-                    // 没授权才检查是否是高级管理员密码
                     if (pwd === ADMIN_PASSWORD) {
                         adminLoggedIn = true;
                         adminLevel = 'super_admin';
                         localStorage.setItem('fhq_admin_logged_in', 'true');
+                        localStorage.setItem('fhq_admin_level', 'super_admin');
                         updateRemainVotes();
                         renderAdminPanel();
                         showToast('高级管理员已解锁');
@@ -1597,11 +1596,11 @@ if (adminLevel === 'super_admin') adminLevel = 'admin';
             });
             return;
         }
-        // 高级管理员密码登录
         if (pwd === ADMIN_PASSWORD) {
             adminLoggedIn = true;
             adminLevel = 'super_admin';
             localStorage.setItem('fhq_admin_logged_in', 'true');
+            localStorage.setItem('fhq_admin_level', 'super_admin');
             updateRemainVotes();
             renderAdminPanel();
             showToast('高级管理员已解锁');
@@ -1727,7 +1726,7 @@ if (tab === 'guild') {
     content.innerHTML = '<b>授予/管理权限</b><input class="input-field" id="grantUserId" placeholder="输入用户🆔"><select id="grantLevel" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;margin-bottom:8px;"><option value="admin">普通管理员</option><option value="super_admin">高级管理员</option></select><button class="btn btn-primary" onclick="adminGrant()" style="width:100%;margin-bottom:8px;">✅ 授予权限</button><button class="btn btn-outline" onclick="adminRevoke()" style="width:100%;color:#f55;border-color:#f55;">🗑️ 撤销管理员</button><hr><b>已有管理员列表</b><div id="adminList"></div>';
     renderAdminList();
 } else if (tab === 'announce') {
-    content.innerHTML = '<b>发布公告</b><select id="announceType" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;margin-bottom:8px;"><option value="popup">📢 悬浮窗公告</option><option value="broadcast">📣 播报公告</option></select><textarea id="announceText" style="width:100%;height:80px;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;font-size:0.9rem;margin-bottom:8px;resize:vertical;" placeholder="输入公告内容..."></textarea><div id="announceFileArea"><input type="file" id="announceFile" accept="image/*,video/*" style="display:block;margin-bottom:8px;color:#fff;padding:8px;"></div><button class="btn btn-gold" onclick="adminSendAnnounce()" style="width:100%;margin-bottom:8px;">📢 发送公告</button><button class="btn btn-outline" onclick="adminClearAnnounce()" style="width:100%;color:#f55;border-color:#f55;">🗑️ 删除公告</button>';
+    content.innerHTML = '<b>发布公告</b><select id="announceType" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;margin-bottom:8px;"><option value="popup">📢 悬浮窗公告</option><option value="broadcast">📣 播报公告</option></select><textarea id="announceText" style="width:100%;height:80px;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;font-size:0.9rem;margin-bottom:8px;resize:vertical;" placeholder="输入公告内容..."></textarea><div id="announceFileArea"><input type="file" id="announceFile" accept="image/*,video/*" style="display:block;margin-bottom:8px;color:#fff;padding:8px;"></div><button class="btn btn-gold" onclick="adminSendAnnounce()" style="width:100%;margin-bottom:8px;">📢 发送公告</button><button class="btn btn-outline" onclick="adminClearAnnounce()" style="width:100%;color:#f55;border-color:#f55;">🗑️ 删除公告</button><button class="btn btn-outline" onclick="adminClearBroadcast()" style="width:100%;color:#f55;border-color:#f55;margin-top:8px;">🗑️ 删除所有播报</button>';
     document.getElementById('announceType').addEventListener('change', function(){
         document.getElementById('announceFileArea').style.display = this.value === 'broadcast' ? 'none' : 'block';
     });
@@ -1993,6 +1992,17 @@ window.adminClearAll = function() {
     ]);
 };
 
+window.adminClearBroadcast = function() {
+    showModal('确认删除', '确定要删除所有播报记录吗？', [
+        { text: '取消', cls: 'btn-outline', callback: () => {} },
+        { text: '🗑️ 确认删除', cls: 'btn-outline', callback: () => {
+            db.ref('broadcast').remove();
+            document.getElementById('broadcastBar').innerHTML = '';
+            showToast('所有播报已删除');
+        }}
+    ]);
+};
+
 window.exportData = function() {
     const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'fhq_backup.json'; a.click();
@@ -2012,16 +2022,23 @@ navTabs.addEventListener('click', e => {
 function init() {
     if (localStorage.getItem('fhq_admin_logged_in') === 'true') {
         adminLoggedIn = true;
+        var savedLevel = localStorage.getItem('fhq_admin_level') || 'admin';
+        adminLevel = savedLevel;
+        
         db.ref('admins/' + userId).once('value', function(snap){
-if (snap.exists()) {
-    adminLevel = snap.val().level || 'admin';
-    if (adminLevel === 'super_admin') adminLevel = 'admin';
-} else {
-    adminLoggedIn = false;
-    localStorage.removeItem('fhq_admin_logged_in');
-    updateRemainVotes();
-}
-});
+            if (snap.exists()) {
+                adminLevel = snap.val().level || 'admin';
+                localStorage.setItem('fhq_admin_level', adminLevel);
+            } else if (adminLevel === 'super_admin') {
+                localStorage.setItem('fhq_admin_level', 'super_admin');
+            } else {
+                adminLoggedIn = false;
+                adminLevel = 'admin';
+                localStorage.removeItem('fhq_admin_logged_in');
+                localStorage.removeItem('fhq_admin_level');
+            }
+            updateRemainVotes();
+        });
     }
     appData.guilds.forEach(g => {
         if (!g.avatar) g.avatar = DEFAULT_AVATAR;
