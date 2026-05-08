@@ -2929,21 +2929,7 @@ window.openRedPacketPage = function() {
     // 检查次数限制
     var today = new Date().toDateString();
     var winnerData = JSON.parse(localStorage.getItem('fhq_red_winners') || '{}');
-    if (redPacketConfig.grabLimits && redPacketConfig.grabLimits.hasOwnProperty(userId)) {
-        var maxGrab = redPacketConfig.grabLimits[userId];
-        if (maxGrab <= 0) {
-            showToast('🚫 你已被限制抢红包');
-            return;
-        }
-        var todayGrabbedCount = Object.keys(winnerData).filter(function(k) {
-            return k.startsWith(userId + '_') && k.endsWith('_' + today);
-        }).length;
-        if (todayGrabbedCount >= maxGrab) {
-            showToast('你今天抢红包次数已用完(' + maxGrab + '次)');
-            return;
-        }
-    }
-    
+
     var redPacketAmounts = redPacketConfig.amounts.slice();
     redPacketAmounts.sort(function() { return Math.random() - 0.5; });
     var totalRedPackets = redPacketConfig.totalCount;
@@ -2990,7 +2976,7 @@ window.openRedPacketPage = function() {
                 if (item.classList.contains('grabbed')) { showToast('该红包已被抢完'); return; }
                 var today3 = new Date().toDateString();
                 var myKey3 = userId + '_' + today3;
-                if (winnerData[myKey3]) return;
+                
                 var grabbedNow = Object.keys(winnerData).filter(function(k) { return k.endsWith('_' + today3); }).length;
                 if (grabbedNow >= totalRedPackets) { showToast('该红包已被抢完'); return; }
                 var actualAmount = parseFloat(item.dataset.amount);
