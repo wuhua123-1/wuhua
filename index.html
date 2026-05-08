@@ -9,8 +9,8 @@
     <title>封号圈公会投票平台</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-        <style>
-    /* ========== 全局变量 ========== */
+    <style>
+        /* ========== 全局变量 ========== */
         :root {
             --bg-deep: #0D0D11;
             --bg-card: rgba(22, 22, 30, 0.75);
@@ -51,6 +51,68 @@
             line-height: 1.5;
         }
 
+        /* ========== 红包展示页 ========== */
+        .red-packet-page {
+            position: fixed;
+            inset: 0;
+            z-index: 4000;
+            background: rgba(0,0,0,0.92);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+        .red-packet-item {
+            width: 80px;
+            height: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+            position: relative;
+        }
+        .red-packet-item:active { transform: scale(1.2); }
+        .red-packet-item .rp-icon {
+            font-size: 3rem;
+            filter: drop-shadow(0 0 10px rgba(255,0,0,0.6));
+            animation: rpBounce 1s ease-in-out infinite;
+        }
+        .red-packet-item.grabbed .rp-icon {
+            filter: grayscale(1);
+            opacity: 0.4;
+            animation: none;
+        }
+        .red-packet-item .rp-label {
+            font-size: 0.7rem;
+            color: #FFB800;
+            margin-top: 4px;
+            text-align: center;
+        }
+        .red-packet-item.grabbed .rp-label { color: #666; }
+        @keyframes rpBounce {
+            0%,100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        .rp-close-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 4001;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
         /* 低噪点背景纹理 */
         body::before {
             content: '';
@@ -61,6 +123,9 @@
             opacity: 0.025;
             background-image: url("data:image/svg+xml,%3Csvg width='280' height='280' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
             background-size: 280px 280px;
+        }
+
+        
         }
 
         /* 主容器 */
@@ -1047,6 +1112,7 @@
             <div class="logo-area"><span class="logo-dot"></span>封号圈</div>
             <div class="point-balance"><span>💎</span> <span class="point-num" id="pointNum">0</span> 钻石</div>
             <button class="btn-sign blink-call" id="btnSign" onclick="doSign()">🎁 签到领钻石</button>
+            <button class="btn-sign" id="btnRedPacket" onclick="openRedPacketPage()" style="margin-left:8px;background:rgba(255,0,0,0.15);border-color:rgba(255,0,0,0.4);color:#FF6B6B;">🧧 抢红包</button>
         </div>
         <div class="nav-tabs" id="navTabs">
             <button class="nav-tab active" data-page="votePage">🗳️投票</button>
@@ -1775,6 +1841,7 @@ if (adminLevel === 'super_admin') {
 }
 menuHTML += '<button onclick="adminShowTab(\'chat\')" id="adminTabChat" style="padding:8px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#a0a0b8;font-size:0.8rem;">💬聊天</button>';
 menuHTML += '<button onclick="adminShowTab(\'announce\')" id="adminTabAnnounce" style="padding:8px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#a0a0b8;font-size:0.8rem;">📢公告</button>';
+menuHTML += '<button onclick="adminShowTab(\'redpacket\')" id="adminTabRedpacket" style="padding:8px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#a0a0b8;font-size:0.8rem;">🧧红包管理</button>';
 menuHTML += '</div>';
     
     const panel = $('#adminPanel');
@@ -1830,11 +1897,14 @@ if (tab === 'guild') {
         setupAtSystem('groupChatInput', 'atSuggestions');
     }
     return;
-    } else if (tab === 'query') {
-    content.innerHTML = '<b>查询与改名</b><input class="input-field" id="queryUserId" placeholder="输入要查询的🆔"><button class="btn btn-primary" onclick="adminQueryUser()" style="width:100%;margin-bottom:8px;">🔍 查询状态</button><div id="queryResult" style="color:#fff;margin-bottom:8px;"></div><hr><b>更改🆔</b><input class="input-field" id="changeOldId" placeholder="输入要更改的🆔"><input class="input-field" id="changeNewId" placeholder="输入新🆔"><button class="btn btn-gold" onclick="adminChangeId()" style="width:100%;">✏️ 更改🆔</button>';
-    } else if (tab === 'grant') {
-    content.innerHTML = '<b>授予/管理权限</b><input class="input-field" id="grantUserId" placeholder="输入用户🆔"><select id="grantLevel" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;margin-bottom:8px;"><option value="admin">普通管理员</option><option value="super_admin">高级管理员</option></select><button class="btn btn-primary" onclick="adminGrant()" style="width:100%;margin-bottom:8px;">✅ 授予权限</button><button class="btn btn-outline" onclick="adminRevoke()" style="width:100%;color:#f55;border-color:#f55;">🗑️ 撤销管理员</button><hr><b>已有管理员列表</b><div id="adminList"></div>';
-    renderAdminList();
+} else if (tab === 'query') {
+content.innerHTML = '<b>查询与改名</b><input class="input-field" id="queryUserId" placeholder="输入要查询的🆔"><button class="btn btn-primary" onclick="adminQueryUser()" style="width:100%;margin-bottom:8px;">🔍 查询状态</button><div id="queryResult" style="color:#fff;margin-bottom:8px;"></div><hr><b>更改🆔</b><input class="input-field" id="changeOldId" placeholder="输入要更改的🆔"><input class="input-field" id="changeNewId" placeholder="输入新🆔"><button class="btn btn-gold" onclick="adminChangeId()" style="width:100%;">✏️ 更改🆔</button>';
+} else if (tab === 'grant') {
+content.innerHTML = '<b>授予/管理权限</b><input class="input-field" id="grantUserId" placeholder="输入用户🆔"><select id="grantLevel" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;margin-bottom:8px;"><option value="admin">普通管理员</option><option value="super_admin">高级管理员</option></select><button class="btn btn-primary" onclick="adminGrant()" style="width:100%;margin-bottom:8px;">✅ 授予权限</button><button class="btn btn-outline" onclick="adminRevoke()" style="width:100%;color:#f55;border-color:#f55;">🗑️ 撤销管理员</button><hr><b>已有管理员列表</b><div id="adminList"></div>';
+renderAdminList();
+} else if (tab === 'redpacket') {
+adminShowRedPacketTab();
+return;
 } else if (tab === 'announce') {
     content.innerHTML = '<b>发布公告</b><select id="announceType" style="width:100%;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;margin-bottom:8px;"><option value="popup">📢 悬浮窗公告</option><option value="broadcast">📣 播报公告</option></select><textarea id="announceText" style="width:100%;height:80px;padding:10px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;font-size:0.9rem;margin-bottom:8px;resize:vertical;" placeholder="输入公告内容..."></textarea><div id="announceFileArea"><input type="file" id="announceFile" accept="image/*,video/*" style="display:block;margin-bottom:8px;color:#fff;padding:8px;"></div><button class="btn btn-gold" onclick="adminSendAnnounce()" style="width:100%;margin-bottom:8px;">📢 发送公告</button><button class="btn btn-outline" onclick="adminClearAnnounce()" style="width:100%;color:#f55;border-color:#f55;">🗑️ 删除公告</button><button class="btn btn-outline" onclick="adminClearBroadcast()" style="width:100%;color:#f55;border-color:#f55;margin-top:8px;">🗑️ 删除所有播报</button>';
     document.getElementById('announceType').addEventListener('change', function(){
@@ -2469,14 +2539,7 @@ function removeIsland(island) {
     setTimeout(function() { if (island.parentNode) island.remove(); }, 400);
 }
 
-// 监听：用户打开群聊时自动关闭灵动岛
-var _origShowGroupChatUI = showGroupChatUI;
-showGroupChatUI = function() {
-    if (activeIsland) {
-        removeIsland(activeIsland);
-    }
-    _origShowGroupChatUI();
-};
+
 
 var alertedMessages = {};
 function listenForAtMentions() {
@@ -2500,8 +2563,499 @@ if (!userId) return;
     });
 }
 
+// ========== 红包系统 ==========
+var redPacketAmounts = [0.88, 1, 1.88, 1.88, 1.88, 1.88, 2.88, 2.88, 2.88, 8.88];
+redPacketAmounts.sort(function() { return Math.random() - 0.5; });  // ← 加这一行
+var totalRedPackets = 10;
+var winnerData = JSON.parse(localStorage.getItem('fhq_red_winners') || '{}');
+
+window.openRedPacketPage = function() {
+    var today = new Date().toDateString();
+    var myKey = userId + '_' + today;
+    if (winnerData[myKey]) {
+        showToast('你今天已经抢过红包了');
+        return;
+    }
+    
+    var grabbed = Object.keys(winnerData).filter(function(k) { return k.endsWith('_' + today); }).length;
+    if (grabbed >= totalRedPackets) {
+        showToast('今天的红包已被抢完，明天再来吧');
+        return;
+    }
+    
+    var overlay = document.createElement('div');
+    overlay.className = 'red-packet-page';
+    overlay.id = 'redPacketOverlay';
+    
+    var closeBtn = document.createElement('button');
+    closeBtn.className = 'rp-close-btn';
+    closeBtn.textContent = '✕';
+    closeBtn.onclick = function() { overlay.remove(); };
+    overlay.appendChild(closeBtn);
+    
+    for (var i = 0; i < totalRedPackets; i++) {
+        (function(index) {
+            var item = document.createElement('div');
+            item.className = 'red-packet-item';
+            
+            var today2 = new Date().toDateString();
+            var isAllGrabbed = Object.keys(winnerData).filter(function(k) { return k.endsWith('_' + today2); }).length >= totalRedPackets;
+            var amount = redPacketAmounts[index];
+            var icon = document.createElement('span');
+            icon.className = 'rp-icon';
+            icon.textContent = '🧧';
+            
+            var label = document.createElement('span');
+            label.className = 'rp-label';
+            label.textContent = amount.toFixed(2) + '元';
+item.dataset.amount = amount;
+            
+            item.appendChild(icon);
+            item.appendChild(label);
+            
+            if (isAllGrabbed) {
+                item.classList.add('grabbed');
+            }
+            
+            item.addEventListener('click', function() {
+                if (item.classList.contains('grabbed')) {
+                    showToast('该红包已被抢完');
+                    return;
+                }
+                var today3 = new Date().toDateString();
+                var myKey3 = userId + '_' + today3;
+                if (winnerData[myKey3]) return;
+                
+                var grabbedNow = Object.keys(winnerData).filter(function(k) { return k.endsWith('_' + today3); }).length;
+                if (grabbedNow >= totalRedPackets) {
+                    showToast('该红包已被抢完');
+                    return;
+                }
+                
+                var actualAmount = parseFloat(item.dataset.amount);
+                winnerData[myKey3] = { amount: actualAmount, settled: false, time: Date.now() };
+                localStorage.setItem('fhq_red_winners', JSON.stringify(winnerData));
+                
+                item.classList.add('grabbed');
+                overlay.remove();
+                
+                spawnFX('🧧', 10, 0.5, 0.3);
+                
+                showModal('🧧 恭喜中奖！', 
+                    '用户 <b style="color:#FFB800;">🆔' + userId + '</b><br>抢到了 <b style="color:#FFB800;font-size:1.5rem;">' + actualAmount.toFixed(2) + ' 元</b> 红包',
+                    [{ text: '知道了', cls: 'btn-gold', callback: function() {} }]
+                );
+                
+                showDynamicIsland('🧧 请尽快前往群聊 @管理员 结账', function() {
+                    document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active');});
+                    document.querySelector('[data-page="adminPage"]').classList.add('active');
+                    document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+                    document.getElementById('adminPage').classList.add('active');
+                    showGroupChatUI();
+                });
+            });
+            
+            overlay.appendChild(item);
+        })(i);
+    }
+    
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) overlay.remove();
+    });
+};
+
+// 每天0点清空红包数据
+function resetDailyRedPackets() {
+    var today = new Date().toDateString();
+    if (localStorage.getItem('fhq_red_reset_date') !== today) {
+        localStorage.setItem('fhq_red_reset_date', today);
+        var todayWinners = {};
+        var allWinners = JSON.parse(localStorage.getItem('fhq_red_winners') || '{}');
+        Object.keys(allWinners).forEach(function(k) {
+            if (k.endsWith('_' + today)) {
+                todayWinners[k] = allWinners[k];
+            }
+        });
+        localStorage.setItem('fhq_red_winners', JSON.stringify(todayWinners));
+        winnerData = todayWinners;
+    }
+}
+resetDailyRedPackets();
+
+// 结账命令
+window.settleRedPacket = function() {
+    var input = document.getElementById('settleInput');
+    if (!input) return;
+    var val = input.value.trim();
+    if (!val) return;
+    
+    var match = val.match(/^(\d+)\u7ed3\u8d26$/);
+    if (!match) { showToast('格式错误，请输入：🆔xxx结算'); return; }
+    var targetId = match[1];
+    var today = new Date().toDateString();
+    var key = targetId + '_' + today;
+    
+    if (!winnerData[key]) { showToast('该用户今天没有中奖记录'); return; }
+    if (winnerData[key].settled) { showToast('该用户已结账'); return; }
+    
+    winnerData[key].settled = true;
+    localStorage.setItem('fhq_red_winners', JSON.stringify(winnerData));
+    input.value = '';
+    showToast('✅ ' + targetId + ' 已结账完成');
+    loadGroupChat();
+};
+
+// 修改群聊显示——红包余额标签
+var _origLoadGroupChat = loadGroupChat;
+loadGroupChat = function() {
+    _origLoadGroupChat();
+    setTimeout(function() { enhanceGroupChatWithRedBadge(); }, 300);
+};
+
+function enhanceGroupChatWithRedBadge() {
+    var container = document.getElementById('groupChatMessages');
+    if (!container) return;
+    var today = new Date().toDateString();
+    var nameSpans = container.querySelectorAll('div[style*="font-size:0.7rem"]');
+    nameSpans.forEach(function(span) {
+        var text = span.textContent;
+        var match = text.match(/^ID:(\d+)$/);
+        if (match) {
+            var uid = match[1];
+            var key = uid + '_' + today;
+            if (winnerData[key] && !winnerData[key].settled) {
+                if (span.querySelector('.red-balance-badge')) return;
+                var badge = document.createElement('span');
+                badge.className = 'red-balance-badge';
+                badge.style.cssText = 'font-size:0.65rem;color:#FFB800;margin-left:4px;animation:winnerGlow 1.5s ease-in-out infinite;';
+                badge.textContent = '(红包余额¥' + winnerData[key].amount.toFixed(2) + ')';
+                span.appendChild(badge);
+            }
+        }
+    });
+}
+
+// 管理员聊天面板加入结账输入框
+var _origShowGroupChatUI2 = showGroupChatUI;
+showGroupChatUI = function() {
+    if (activeIsland) {
+        removeIsland(activeIsland);
+    }
+    _origShowGroupChatUI2();
+    if (adminLoggedIn) {
+        setTimeout(function() {
+            var container = document.querySelector('#adminPage .admin-card');
+            if (!container) return;
+            var existing = document.getElementById('settleArea');
+            if (existing) return;
+            var settleArea = document.createElement('div');
+            settleArea.id = 'settleArea';
+            settleArea.className = 'settle-input-area';
+            settleArea.innerHTML = '<input type="text" id="settleInput" placeholder="输入 🆔xxx结算" style="flex:1;padding:8px 12px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:20px;color:#fff;font-size:0.8rem;"><button onclick="settleRedPacket()">💰结账</button>';
+            var chatBox = container.querySelector('div[style*="flex-direction:column"]');
+            if (chatBox) chatBox.parentNode.insertBefore(settleArea, chatBox);
+        }, 500);
+    }
+};
+
+// ========== 红包管理 ==========
+var redPacketConfig = {
+    amounts: [0.88, 1, 1.88, 1.88, 1.88, 1.88, 2.88, 2.88, 2.88, 8.88],
+    totalCount: 10,
+    bannedUsers: [],
+    scheduled: null
+};
+
+function loadRedPacketConfig() {
+    db.ref('redPacketConfig').on('value', function(snap) {
+        if (snap.val()) {
+            redPacketConfig = snap.val();
+            if (!redPacketConfig.bannedUsers) redPacketConfig.bannedUsers = [];
+        } else {
+            db.ref('redPacketConfig').set(redPacketConfig);
+        }
+        window._redPacketAmounts = redPacketConfig.amounts;
+        window._totalRedPackets = redPacketConfig.totalCount;
+    });
+}
+loadRedPacketConfig();
+
+function saveRedPacketConfig() {
+    db.ref('redPacketConfig').set(redPacketConfig);
+}
+
+window.adminShowRedPacketTab = function() {
+    var content = document.getElementById('adminTabContent');
+    if (!content) return;
+    
+    var panel = document.createElement('div');
+    panel.className = 'admin-red-packet-panel';
+    
+    var today = new Date().toDateString();
+    var allWinners = JSON.parse(localStorage.getItem('fhq_red_winners') || '{}');
+    
+    var statusHTML = '<div class="section-title">🧧 红包实时状态（今日）</div>';
+    statusHTML += '<div class="rp-status-grid">';
+    for (var i = 0; i < redPacketConfig.totalCount; i++) {
+        var winnerKeys = Object.keys(allWinners).filter(function(k) { return k.endsWith('_' + today); }).sort(function(a,b) { return allWinners[a].time - allWinners[b].time; });
+        var winner = winnerKeys[i] ? allWinners[winnerKeys[i]] : null;
+        var uid = winner ? winnerKeys[i].split('_')[0] : null;
+        var amount = redPacketConfig.amounts[i] || 0;
+        
+        statusHTML += '<div class="rp-status-item ' + (winner ? 'grabbed' : 'unclaimed') + '">';
+        statusHTML += '<div class="rp-status-amount">¥' + amount.toFixed(2) + '</div>';
+        statusHTML += '<div>' + (winner ? (winner.settled ? '✅' : '⏳') : '🧧') + '</div>';
+        if (winner) statusHTML += '<div class="rp-status-user">🆔' + uid + '</div>';
+        statusHTML += '</div>';
+    }
+    statusHTML += '</div>';
+    
+    statusHTML += '<div class="section-title">💰 设置红包余额</div>';
+    statusHTML += '<div class="admin-input-row">';
+    for (var j = 0; j < redPacketConfig.totalCount; j++) {
+        statusHTML += '<input type="number" id="rpAmount' + j + '" value="' + (redPacketConfig.amounts[j] || 0.88).toFixed(2) + '" step="0.01" min="0.01" style="width:60px;">';
+    }
+    statusHTML += '</div>';
+    statusHTML += '<button class="btn-sm btn-sm-cyan" onclick="adminSaveAmounts()">💾 保存余额</button>';
+    
+    statusHTML += '<div class="section-title" style="margin-top:12px;">🔢 红包数量</div>';
+    statusHTML += '<div class="admin-input-row">';
+    statusHTML += '<input type="number" id="rpTotalCount" value="' + redPacketConfig.totalCount + '" min="1" max="50">';
+    statusHTML += '<button class="btn-sm btn-sm-cyan" onclick="adminSetCount()">设置</button>';
+    statusHTML += '<button class="btn-sm btn-sm-warn" onclick="adminAddOne()">+1</button>';
+    statusHTML += '<button class="btn-sm btn-sm-danger" onclick="adminRemoveOne()">-1</button>';
+    statusHTML += '</div>';
+    
+    statusHTML += '<div class="section-title" style="margin-top:12px;">🚫 禁止用户抢红包</div>';
+    statusHTML += '<div class="admin-input-row">';
+    statusHTML += '<input type="text" id="rpBanUserId" placeholder="输入用户🆔">';
+    statusHTML += '<button class="btn-sm btn-sm-danger" onclick="adminBanUser()">禁止</button>';
+    statusHTML += '</div>';
+    statusHTML += '<div id="rpBannedList" style="margin-top:6px;">';
+    (redPacketConfig.bannedUsers || []).forEach(function(uid) {
+        statusHTML += '<span class="banned-user-tag">🆔' + uid + ' <button onclick="adminUnbanUser(\'' + uid + '\')">✕</button></span>';
+    });
+    statusHTML += '</div>';
+    
+    statusHTML += '<div class="section-title" style="margin-top:12px;">⏰ 定时刷新配置</div>';
+    statusHTML += '<div class="admin-input-row">';
+    statusHTML += '<input type="number" id="rpScheduleValue" value="0" min="0" placeholder="数值">';
+    statusHTML += '<select id="rpScheduleUnit"><option value="seconds">秒</option><option value="minutes">分钟</option><option value="hours">小时</option><option value="days">天</option></select>';
+    statusHTML += '</div>';
+    statusHTML += '<div class="admin-input-row">';
+    statusHTML += '<input type="number" id="rpScheduleAmount" value="0.88" step="0.01" placeholder="每个红包金额">';
+    statusHTML += '<input type="number" id="rpScheduleCount" value="10" min="1" max="50" placeholder="红包数量">';
+    statusHTML += '</div>';
+    statusHTML += '<button class="btn-sm btn-sm-warn" onclick="adminScheduleRefresh()">⏰ 设置定时刷新</button>';
+    statusHTML += '<button class="btn-sm btn-sm-danger" onclick="adminCancelSchedule()" style="margin-left:4px;">取消定时</button>';
+    
+    if (redPacketConfig.scheduled && redPacketConfig.scheduled.triggerTime > Date.now()) {
+        var remain = Math.floor((redPacketConfig.scheduled.triggerTime - Date.now()) / 1000);
+        var remainStr = '';
+        if (remain >= 86400) remainStr = Math.floor(remain/86400) + '天';
+        else if (remain >= 3600) remainStr = Math.floor(remain/3600) + '小时';
+        else if (remain >= 60) remainStr = Math.floor(remain/60) + '分钟';
+        else remainStr = remain + '秒';
+        statusHTML += '<div class="schedule-info">⏰ 已设置定时刷新：' + remainStr + '后生效 | ' + redPacketConfig.scheduled.totalCount + '个红包 | 每个¥' + redPacketConfig.scheduled.amounts[0].toFixed(2) + '</div>';
+    }
+    
+    content.innerHTML = '';
+    content.appendChild(panel);
+    panel.innerHTML = statusHTML;
+};
+
+window.adminSaveAmounts = function() {
+    for (var i = 0; i < redPacketConfig.totalCount; i++) {
+        var el = document.getElementById('rpAmount' + i);
+        if (el) redPacketConfig.amounts[i] = parseFloat(el.value) || 0.01;
+    }
+    saveRedPacketConfig();
+    showToast('红包余额已保存');
+    adminShowRedPacketTab();
+};
+
+window.adminSetCount = function() {
+    var count = parseInt(document.getElementById('rpTotalCount').value) || 10;
+    if (count < 1) count = 1;
+    if (count > 50) count = 50;
+    if (count > redPacketConfig.amounts.length) {
+        for (var i = redPacketConfig.amounts.length; i < count; i++) {
+            redPacketConfig.amounts.push(1.88);
+        }
+    } else {
+        redPacketConfig.amounts = redPacketConfig.amounts.slice(0, count);
+    }
+    redPacketConfig.totalCount = count;
+    saveRedPacketConfig();
+    showToast('红包数量已设为' + count);
+    adminShowRedPacketTab();
+};
+
+window.adminAddOne = function() {
+    if (redPacketConfig.totalCount >= 50) { showToast('最多50个红包'); return; }
+    redPacketConfig.totalCount++;
+    redPacketConfig.amounts.push(1.88);
+    saveRedPacketConfig();
+    showToast('红包数量+1，当前' + redPacketConfig.totalCount + '个');
+    adminShowRedPacketTab();
+};
+
+window.adminRemoveOne = function() {
+    if (redPacketConfig.totalCount <= 1) { showToast('至少保留1个红包'); return; }
+    redPacketConfig.totalCount--;
+    redPacketConfig.amounts.pop();
+    saveRedPacketConfig();
+    showToast('红包数量-1，当前' + redPacketConfig.totalCount + '个');
+    adminShowRedPacketTab();
+};
+
+window.adminBanUser = function() {
+    var uid = document.getElementById('rpBanUserId').value.trim();
+    if (!uid) { showToast('请输入用户ID'); return; }
+    if (!redPacketConfig.bannedUsers) redPacketConfig.bannedUsers = [];
+    if (redPacketConfig.bannedUsers.indexOf(uid) !== -1) { showToast('该用户已被禁止'); return; }
+    redPacketConfig.bannedUsers.push(uid);
+    saveRedPacketConfig();
+    showToast('已禁止 🆔' + uid + ' 抢红包');
+    adminShowRedPacketTab();
+};
+
+window.adminUnbanUser = function(uid) {
+    redPacketConfig.bannedUsers = redPacketConfig.bannedUsers.filter(function(u) { return u !== uid; });
+    saveRedPacketConfig();
+    showToast('已解除 🆔' + uid + ' 的禁止');
+    adminShowRedPacketTab();
+};
+
+window.adminScheduleRefresh = function() {
+    var value = parseInt(document.getElementById('rpScheduleValue').value) || 0;
+    var unit = document.getElementById('rpScheduleUnit').value;
+    var amount = parseFloat(document.getElementById('rpScheduleAmount').value) || 0.88;
+    var count = parseInt(document.getElementById('rpScheduleCount').value) || 10;
+    if (value <= 0) { showToast('请输入大于0的时间'); return; }
+    
+    var multiplier = 1;
+    if (unit === 'minutes') multiplier = 60;
+    else if (unit === 'hours') multiplier = 3600;
+    else if (unit === 'days') multiplier = 86400;
+    
+    var delayMs = value * multiplier * 1000;
+    var triggerTime = Date.now() + delayMs;
+    
+    var amounts = [];
+    for (var i = 0; i < count; i++) amounts.push(amount);
+    
+    redPacketConfig.scheduled = { amounts: amounts, totalCount: count, triggerTime: triggerTime };
+    saveRedPacketConfig();
+    
+    setTimeout(function() {
+        redPacketConfig.amounts = amounts;
+        redPacketConfig.totalCount = count;
+        redPacketConfig.scheduled = null;
+        saveRedPacketConfig();
+        localStorage.removeItem('fhq_red_winners');
+        localStorage.setItem('fhq_red_reset_date', new Date().toDateString());
+        showToast('🧧 红包已自动刷新！');
+    }, delayMs);
+    
+    showToast('定时刷新已设置，将在' + value + unit + '后生效');
+    adminShowRedPacketTab();
+};
+
+window.adminCancelSchedule = function() {
+    redPacketConfig.scheduled = null;
+    saveRedPacketConfig();
+    showToast('定时刷新已取消');
+    adminShowRedPacketTab();
+};
+
+// 修改抢红包函数，使用服务器配置并检查禁止名单
+var _origOpenRedPacketPage = window.openRedPacketPage;
+window.openRedPacketPage = function() {
+    if (redPacketConfig.bannedUsers && redPacketConfig.bannedUsers.indexOf(userId) !== -1) {
+        showToast('🚫 你已被禁止抢红包');
+        return;
+    }
+    
+    var redPacketAmounts = redPacketConfig.amounts.slice();
+    redPacketAmounts.sort(function() { return Math.random() - 0.5; });
+    var totalRedPackets = redPacketConfig.totalCount;
+    
+    var today = new Date().toDateString();
+    var myKey = userId + '_' + today;
+    var winnerData = JSON.parse(localStorage.getItem('fhq_red_winners') || '{}');
+    
+    if (winnerData[myKey]) {
+        showToast('你今天已经抢过红包了');
+        return;
+    }
+    
+    var grabbed = Object.keys(winnerData).filter(function(k) { return k.endsWith('_' + today); }).length;
+    if (grabbed >= totalRedPackets) {
+        showToast('今天的红包已被抢完，明天再来吧');
+        return;
+    }
+    
+    var overlay = document.createElement('div');
+    overlay.className = 'red-packet-page';
+    overlay.id = 'redPacketOverlay';
+    
+    var closeBtn = document.createElement('button');
+    closeBtn.className = 'rp-close-btn';
+    closeBtn.textContent = '✕';
+    closeBtn.onclick = function() { overlay.remove(); };
+    overlay.appendChild(closeBtn);
+    
+    for (var i = 0; i < totalRedPackets; i++) {
+        (function(index) {
+            var item = document.createElement('div');
+            item.className = 'red-packet-item';
+            var today2 = new Date().toDateString();
+            var isAllGrabbed = Object.keys(winnerData).filter(function(k) { return k.endsWith('_' + today2); }).length >= totalRedPackets;
+            var amount = redPacketAmounts[index];
+            var icon = document.createElement('span');
+            icon.className = 'rp-icon';
+            icon.textContent = '🧧';
+            var label = document.createElement('span');
+            label.className = 'rp-label';
+            label.textContent = amount.toFixed(2) + '元';
+            item.dataset.amount = amount;
+            item.appendChild(icon);
+            item.appendChild(label);
+            if (isAllGrabbed) item.classList.add('grabbed');
+            
+            item.addEventListener('click', function() {
+                if (item.classList.contains('grabbed')) { showToast('该红包已被抢完'); return; }
+                var today3 = new Date().toDateString();
+                var myKey3 = userId + '_' + today3;
+                if (winnerData[myKey3]) return;
+                var grabbedNow = Object.keys(winnerData).filter(function(k) { return k.endsWith('_' + today3); }).length;
+                if (grabbedNow >= totalRedPackets) { showToast('该红包已被抢完'); return; }
+                var actualAmount = parseFloat(item.dataset.amount);
+                winnerData[myKey3] = { amount: actualAmount, settled: false, time: Date.now() };
+                localStorage.setItem('fhq_red_winners', JSON.stringify(winnerData));
+                item.classList.add('grabbed');
+                overlay.remove();
+                spawnFX('🧧', 10, 0.5, 0.3);
+                showModal('🧧 恭喜中奖！', '用户 <b style="color:#FFB800;">🆔' + userId + '</b><br>抢到了 <b style="color:#FFB800;font-size:1.5rem;">' + actualAmount.toFixed(2) + ' 元</b> 红包', [{ text: '知道了', cls: 'btn-gold', callback: function() {} }]);
+                showDynamicIsland('🧧 请尽快前往群聊 @管理员 结账', function() {
+                    document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active');});
+                    document.querySelector('[data-page="adminPage"]').classList.add('active');
+                    document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+                    document.getElementById('adminPage').classList.add('active');
+                    showGroupChatUI();
+                });
+            });
+            overlay.appendChild(item);
+        })(i);
+    }
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+};
+
 console.log('🚀 封号圈完整版已启动 | 管理密码：2010421');
         })();
-    </script>
-    </body>
-</html>
+        </script>
+</head>
+<body>
