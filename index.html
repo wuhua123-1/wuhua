@@ -963,12 +963,18 @@
     animation: islandOut 0.4s ease-in forwards;
 }
 @keyframes islandIn {
-    from { width: 0; opacity: 0; padding: 10px 0; }
-    to { width: auto; opacity: 1; padding: 10px 20px; }
-}
-@keyframes islandOut {
-    from { opacity: 1; transform: translateX(-50%) scale(1); }
-    to { opacity: 0; transform: translateX(-50%) scale(0.5); }
+    from { 
+        width: 0; 
+        opacity: 0; 
+        padding: 10px 0; 
+        transform: translateX(-50%) scale(0.8); 
+    }
+    to { 
+        width: auto; 
+        opacity: 1; 
+        padding: 10px 20px; 
+        transform: translateX(-50%) scale(1); 
+    }
 }
 
 /* ========== 群聊人数 ========== */
@@ -2310,7 +2316,7 @@ window.groupSendMsg = function() {
     if (!input || !userId) return;
     var text = input.value.trim();
     if (!text) return;
-    db.ref('public_chat').push({ from: userId, text: text, time: Date.now(), type: 'text' });
+    db.ref('public_chat').push({ from: adminLoggedIn ? 'admin' : userId, text: text, time: Date.now(), type: 'text' });
     input.value = '';
 };
 
@@ -2400,11 +2406,15 @@ function showDynamicIsland(text, onClick) {
     }, 5000);
 }
 
+var alertedMessages = {};
 function listenForAtMentions() {
     db.ref('public_chat').on('child_added', function(snap) {
         var msg = snap.val();
         if (!msg || !userId || msg.from === userId) return;
         if (msg.text && msg.text.indexOf('@' + userId) !== -1) {
+            var msgKey = snap.key;
+            if (alertedMessages[msgKey]) return;
+            alertedMessages[msgKey] = true;
             var fromName = msg.from === 'admin' ? '管理员' : ('🆔' + msg.from);
             showDynamicIsland(fromName + ' @了你，请尽快前往群聊', function() {
                 document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active');});
